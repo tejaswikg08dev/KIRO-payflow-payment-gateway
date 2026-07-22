@@ -1,0 +1,23 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: notification-service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+# AWS SNS Configuration (LocalStack for local development)
+aws:
+  sns:
+    endpoint: http://localhost:4566
+    region: ap-south-1
+    email-topic-arn: arn:aws:sns:ap-south-1:000000000000:payflow-email-notifications
+    sms-topic-arn: arn:aws:sns:ap-south-1:000000000000:payflow-sms-notifications

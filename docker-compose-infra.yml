@@ -1,0 +1,80 @@
+# Docker Compose — Infrastructure Only
+# Run this first to start databases and messaging services locally.
+# Usage: docker compose -f docker-compose-infra.yml up -d
+#
+# This starts:
+# - PostgreSQL (port 5432) — our main relational database
+# - Redis (port 6379) — caching, idempotency, rate limiting
+# - DynamoDB Local (port 8000) — webhook events, routing metrics
+# - LocalStack (port 4566) — simulates AWS SQS and SNS locally
+
+version: '3.8'
+
+services:
+
+  # ===== PostgreSQL Database =====
+  # Stores: users, merchants, payments, settlements
+  # Access: localhost:5432
+  # Credentials: payflow / payflow_secret
+  postgres:
+    image: postgres:15
+    container_name: payflow-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: payflow
+      POSTGRES_USER: payflow
+      POSTGRES_PASSWORD: payflow_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== Redis Cache =====
+  # Stores: idempotency keys, rate limit counters, JWT blacklist, routing cache
+  # Access: localhost:6379
+  redis:
+    image: redis:7-alpine
+    container_name: payflow-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== DynamoDB Local =====
+  # Stores: webhook events, routing metrics, audit trail
+  # Access: localhost:8000
+  # This is Amazon's official local DynamoDB emulator
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: payflow-dynamodb
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+
+  # ===== LocalStack (SQS + SNS) =====
+  # Simulates AWS services locally
+  # SQS endpoint: http://localhost:4566
+  # SNS endpoint: http://localhost:4566
+  localstack:
+    image: localstack/localstack:latest
+    container_name: payflow-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sqs,sns
+      DEFAULT_REGION: ap-south-1
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - ./docker/init-localstack.sh:/etc/localstack/init/ready.d/init.sh
+
+volumes:
+  postgres_data:

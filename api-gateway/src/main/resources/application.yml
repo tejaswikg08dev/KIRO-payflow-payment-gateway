@@ -1,0 +1,93 @@
+# API Gateway Configuration
+# Port: 8080 (single entry point for all external traffic)
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      # Route definitions: URL pattern → target service
+      routes:
+        # === Identity Service Routes ===
+        - id: identity-service
+          uri: lb://IDENTITY-SERVICE    # lb:// = load-balanced via Eureka
+          predicates:
+            - Path=/v1/auth/**          # All auth endpoints
+          filters:
+            - StripPrefix=0             # Keep full path
+
+        # === Merchant Service Routes ===
+        - id: merchant-service
+          uri: lb://MERCHANT-SERVICE
+          predicates:
+            - Path=/v1/merchants/**
+          filters:
+            - StripPrefix=0
+
+        # === Payment Service Routes (Orders) ===
+        - id: payment-service-orders
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/v1/orders/**
+          filters:
+            - StripPrefix=0
+
+        # === Payment Service Routes (Payments) ===
+        - id: payment-service-payments
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/v1/payments/**
+          filters:
+            - StripPrefix=0
+
+        # === Settlement Service Routes ===
+        - id: settlement-service
+          uri: lb://SETTLEMENT-SERVICE
+          predicates:
+            - Path=/v1/settlements/**
+          filters:
+            - StripPrefix=0
+
+        # === Webhook Service Routes ===
+        - id: webhook-service
+          uri: lb://WEBHOOK-SERVICE
+          predicates:
+            - Path=/v1/webhooks/**
+          filters:
+            - StripPrefix=0
+
+      # Global default filters (apply to ALL routes)
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin
+
+  # Redis for rate limiting
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# Eureka (discover services by name)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      enabled: true
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

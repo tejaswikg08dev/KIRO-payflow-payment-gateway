@@ -1,0 +1,46 @@
+# Identity Service — Local configuration
+# In production, config comes from Config Server.
+# This file is used for local development (running without Config Server).
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: identity-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payflow?currentSchema=identity
+    username: payflow
+    password: payflow_secret
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: identity
+        format_sql: true
+  flyway:
+    enabled: true
+    schemas: identity
+    locations: classpath:db/migration
+
+jwt:
+  secret: payflow-jwt-secret-key-change-in-production-minimum-256-bits-long-key-here
+  access-token-expiry: 900000
+  refresh-token-expiry: 604800000
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

@@ -1,0 +1,319 @@
+# ═══════════════════════════════════════════════════════════
+# PayFlow Payment Gateway - Production Docker Compose
+# ═══════════════════════════════════════════════════════════
+# Infrastructure (Postgres, Redis, Kafka) is managed via AWS
+# services (RDS, ElastiCache, MSK). This compose file only
+# runs the application services.
+#
+# Required environment variables (set in .env or CI/CD):
+#   DATABASE_URL          - RDS PostgreSQL endpoint
+#   DATABASE_USERNAME     - RDS credentials
+#   DATABASE_PASSWORD     - RDS credentials
+#   REDIS_HOST            - ElastiCache endpoint
+#   REDIS_PORT            - ElastiCache port
+#   KAFKA_BOOTSTRAP_SERVERS - MSK bootstrap servers
+#   JWT_SECRET            - JWT signing key (min 32 chars)
+#   SPRING_PROFILES_ACTIVE - Should be "prod"
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml logs -f
+# ═══════════════════════════════════════════════════════════
+
+version: '3.8'
+
+x-common-env: &common-env
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+  SPRING_DATASOURCE_URL: jdbc:postgresql://${DATABASE_URL}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-payflow}
+  SPRING_DATASOURCE_USERNAME: ${DATABASE_USERNAME}
+  SPRING_DATASOURCE_PASSWORD: ${DATABASE_PASSWORD}
+  SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+  SPRING_DATA_REDIS_PORT: ${REDIS_PORT:-6379}
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+
+x-common-deploy: &common-deploy
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+        cpus: '1.0'
+      reservations:
+        memory: 256M
+    restart_policy:
+      condition: on-failure
+      delay: 10s
+      max_attempts: 3
+      window: 60s
+
+services:
+  # ─── Core Infrastructure Services ─────────────────────
+
+  service-registry:
+    build:
+      context: .
+      dockerfile: service-registry/Dockerfile
+    container_name: payflow-registry
+    ports:
+      - "8761:8761"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8761
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  config-server:
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
+    container_name: payflow-config
+    ports:
+      - "8888:8888"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  # ─── Application Services ──────────────────────────────
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: payflow-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8080
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+      IDENTITY_SERVICE_URL: http://identity-service:8081
+      PAYMENT_SERVICE_URL: http://payment-service:8082
+      MERCHANT_SERVICE_URL: http://merchant-service:8082
+      ROUTING_SERVICE_URL: http://routing-service:8084
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: identity-service/Dockerfile
+    container_name: payflow-identity
+    ports:
+      - "8081:8081"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8081
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  merchant-service:
+    build:
+      context: .
+      dockerfile: merchant-service/Dockerfile
+    container_name: payflow-merchant
+    ports:
+      - "8082:8082"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8082
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_name: payflow-payment
+    ports:
+      - "8083:8083"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8083
+      BANK_SIMULATOR_HOST: bank-simulator
+      BANK_SIMULATOR_PORT: 9000
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  routing-service:
+    build:
+      context: .
+      dockerfile: routing-service/Dockerfile
+    container_name: payflow-routing
+    ports:
+      - "8084:8084"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8084
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  settlement-service:
+    build:
+      context: .
+      dockerfile: settlement-service/Dockerfile
+    container_name: payflow-settlement
+    ports:
+      - "8085:8085"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8085
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  webhook-service:
+    build:
+      context: .
+      dockerfile: webhook-service/Dockerfile
+    container_name: payflow-webhook
+    ports:
+      - "8086:8086"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8086
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: payflow-notification
+    ports:
+      - "8087:8087"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8087
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+  bank-simulator:
+    build:
+      context: .
+      dockerfile: bank-simulator/Dockerfile
+    container_name: payflow-bank-sim
+    ports:
+      - "9000:9000"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SERVER_PORT: 9000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    <<: *common-deploy
+    networks:
+      - payflow-net
+
+networks:
+  payflow-net:
+    driver: bridge

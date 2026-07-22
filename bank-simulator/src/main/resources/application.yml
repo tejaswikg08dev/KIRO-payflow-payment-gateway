@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: bank-simulator
+  main:
+    web-application-type: none  # No web server needed (TCP only)
+
+bank:
+  simulator:
+    port: 9000
+
+logging:
+  level:
+    com.payflow.simulator: INFO

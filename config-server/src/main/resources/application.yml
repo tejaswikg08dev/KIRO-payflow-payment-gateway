@@ -1,0 +1,25 @@
+# Config Server Configuration
+# Port: 8888 (standard Spring Cloud Config port)
+
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native  # Read config files from local filesystem (not Git)
+  cloud:
+    config:
+      server:
+        native:
+          # Location of config files for each service
+          search-locations: classpath:/configurations
+
+# Register with Eureka
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true

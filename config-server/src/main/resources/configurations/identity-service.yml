@@ -1,0 +1,45 @@
+# Configuration for Identity Service
+# This file is served by Config Server when identity-service starts up
+
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payflow?currentSchema=identity
+    username: payflow
+    password: payflow_secret
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate  # We use Flyway for schema, Hibernate just validates
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: identity
+  flyway:
+    enabled: true
+    schemas: identity
+    locations: classpath:db/migration
+
+# JWT Configuration
+jwt:
+  secret: payflow-jwt-secret-key-change-in-production-minimum-256-bits-long
+  access-token-expiry: 900000    # 15 minutes in milliseconds
+  refresh-token-expiry: 604800000 # 7 days in milliseconds
+
+# Eureka
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Swagger
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

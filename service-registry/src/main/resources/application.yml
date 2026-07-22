@@ -1,0 +1,26 @@
+# Service Registry (Eureka Server) Configuration
+# Port: 8761 (standard Eureka port)
+
+server:
+  port: 8761
+
+spring:
+  application:
+    name: service-registry
+
+# Eureka server configuration
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    # This IS the registry — don't try to register with yourself
+    register-with-eureka: false
+    # This IS the registry — don't try to fetch registry from yourself
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # Don't wait for other instances during startup (single instance mode)
+    wait-time-in-ms-when-sync-empty: 0
+    # How often to check for expired services (default 60s)
+    eviction-interval-timer-in-ms: 10000
