@@ -89,6 +89,58 @@ services:
       - data-net
       - backend-net
 
+  service-registry:
+    build:
+      context: .
+      dockerfile: service-registry/Dockerfile
+    container_name: payflow-registry
+    ports:
+      - "8761:8761"
+    environment:
+      SERVER_PORT: 8761
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - backend-net
+
+  config-server:
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
+    container_name: payflow-config
+    ports:
+      - "8888:8888"
+    environment:
+      SERVER_PORT: 8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - backend-net
+
   # ─── Application Services ──────────────────────────────
 
   identity-service:
@@ -108,10 +160,13 @@ services:
       JWT_SECRET: dev-jwt-secret-key-minimum-32-characters-long
       JWT_EXPIRATION_MS: 3600000
       SERVER_PORT: 8081
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      config-server:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
@@ -148,6 +203,7 @@ services:
       BANK_SIMULATOR_HOST: bank-simulator
       BANK_SIMULATOR_PORT: 9090
       SERVER_PORT: 8082
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
@@ -157,6 +213,8 @@ services:
         condition: service_healthy
       bank-simulator:
         condition: service_started
+      config-server:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
       interval: 30s
@@ -188,7 +246,12 @@ services:
       IDENTITY_SERVICE_URL: http://identity-service:8081
       PAYMENT_SERVICE_URL: http://payment-service:8082
       SERVER_PORT: 8080
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
+      service-registry:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       identity-service:
         condition: service_healthy
       payment-service:
