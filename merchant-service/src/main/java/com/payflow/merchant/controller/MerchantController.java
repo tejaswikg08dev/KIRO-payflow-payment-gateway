@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,6 +36,8 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(merchant));
     }
 
+    // ==================== API KEY ENDPOINTS ====================
+
     @PostMapping("/{merchantId}/api-keys")
     @Operation(summary = "Generate API key pair (public + secret)")
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateApiKey(
@@ -54,4 +57,47 @@ public class MerchantController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
+
+    @GetMapping("/{merchantId}/api-keys")
+    @Operation(summary = "List all API keys for a merchant")
+    public ResponseEntity<ApiResponse<List<MerchantService.ApiKeyInfo>>> listApiKeys(
+            @PathVariable String merchantId) {
+        List<MerchantService.ApiKeyInfo> keys = merchantService.listApiKeys(merchantId);
+        return ResponseEntity.ok(ApiResponse.success(keys));
+    }
+
+    @DeleteMapping("/{merchantId}/api-keys/{keyId}")
+    @Operation(summary = "Revoke an API key")
+    public ResponseEntity<ApiResponse<Map<String, String>>> revokeApiKey(
+            @PathVariable String merchantId,
+            @PathVariable String keyId) {
+        merchantService.revokeApiKey(merchantId, keyId);
+        return ResponseEntity.ok(ApiResponse.success(Map.of(
+                "message", "API key revoked successfully",
+                "key_id", keyId
+        )));
+    }
+
+    // ==================== WEBHOOK ENDPOINTS ====================
+
+    @PutMapping("/{merchantId}/webhook")
+    @Operation(summary = "Update webhook URL")
+    public ResponseEntity<ApiResponse<MerchantService.WebhookConfig>> updateWebhook(
+            @PathVariable String merchantId,
+            @RequestBody WebhookRequest request) {
+        MerchantService.WebhookConfig config = merchantService.updateWebhook(merchantId, request.webhookUrl());
+        return ResponseEntity.ok(ApiResponse.success(config));
+    }
+
+    @GetMapping("/{merchantId}/webhook")
+    @Operation(summary = "Get webhook configuration")
+    public ResponseEntity<ApiResponse<MerchantService.WebhookConfig>> getWebhook(
+            @PathVariable String merchantId) {
+        MerchantService.WebhookConfig config = merchantService.getWebhookConfig(merchantId);
+        return ResponseEntity.ok(ApiResponse.success(config));
+    }
+
+    // ==================== REQUEST DTOs ====================
+
+    public record WebhookRequest(String webhookUrl) {}
 }

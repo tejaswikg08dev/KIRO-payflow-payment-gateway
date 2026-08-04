@@ -91,6 +91,89 @@ public class MerchantService {
         return apiKey.getMerchantId();
     }
 
+    /**
+     * List all API keys for a merchant.
+     * Note: Secret key is never returned (only stored as hash).
+     */
+    public java.util.List<ApiKeyInfo> listApiKeys(String merchantId) {
+        // Verify merchant exists
+        getMerchant(merchantId);
+        
+        return apiKeyRepository.findByMerchantId(merchantId).stream()
+                .map(key -> new ApiKeyInfo(
+                        key.getId(),
+                        key.getKeyType(),
+                        key.getPublicKey(),
+                        key.getKeyPrefix(),
+                        key.getStatus(),
+                        key.getLastUsedAt(),
+                        key.getCreatedAt()
+                ))
+                .toList();
+    }
+
+    /**
+     * Revoke an API key (soft delete — mark as REVOKED).
+     */
+    @Transactional
+    public void revokeApiKey(String merchantId, String keyId) {
+        ApiKey apiKey = apiKeyRepository.findById(keyId)
+                .orElseThrow(() -> new ResourceNotFoundException("ApiKey", "id", keyId));
+        
+        // Verify the key belongs to this merchant
+        if (!apiKey.getMerchantId().equals(merchantId)) {
+            throw new ResourceNotFoundException("ApiKey", "id", keyId);
+        }
+        
+        // Already revoked?
+        if (apiKey.getStatus() == ApiKey.KeyStatus.REVOKED) {
+            throw new IllegalStateException("API key is already revoked");
+        }
+        
+        apiKey.setStatus(ApiKey.KeyStatus.REVOKED);
+        apiKeyRepository.save(apiKey);
+        log.info("API key revoked: {} for merchant {}", keyId, merchantId);
+    }
+
+    /**
+     * Update webhook URL for a merchant.
+     */
+    @Transactional
+    public WebhookConfig updateWebhook(String merchantId, String webhookUrl) {
+        Merchant merchant = getMerchant(merchantId);
+        
+        merchant.setWebhookUrl(webhookUrl);
+        // Regenerate webhook secret on URL change for security
+        String newSecret = generateRandomString(32);
+        merchant.setWebhookSecret(newSecret);
+        
+        merchantRepository.save(merchant);
+        log.info("Webhook updated for merchant {}", merchantId);
+        
+        return new WebhookConfig(webhookUrl, newSecret);
+    }
+
+    /**
+     * Get webhook configuration for a merchant.
+     */
+    public WebhookConfig getWebhookConfig(String merchantId) {
+        Merchant merchant = getMerchant(merchantId);
+        return new WebhookConfig(merchant.getWebhookUrl(), merchant.getWebhookSecret());
+    }
+
+    // DTOs for API responses
+    public record ApiKeyInfo(
+            String keyId,
+            ApiKey.KeyType keyType,
+            String publicKey,
+            String keyPrefix,
+            ApiKey.KeyStatus status,
+            java.time.Instant lastUsedAt,
+            java.time.Instant createdAt
+    ) {}
+
+    public record WebhookConfig(String webhookUrl, String webhookSecret) {}
+
     private String generateRandomString(int length) {
         byte[] bytes = new byte[length];
         RANDOM.nextBytes(bytes);

@@ -174,7 +174,7 @@ routes:
 
 ```sql
 -- Tables
-users (id, email, password_hash, full_name, role, is_active, created_at)
+users (id, email, password_hash, full_name, phone, role, email_verified, status, created_at)
 
 -- Roles
 MERCHANT, ADMIN, CUSTOMER
@@ -206,15 +206,13 @@ MERCHANT, ADMIN, CUSTOMER
 
 ```sql
 -- Tables
-merchants (id, user_id, business_name, business_type, status, created_at)
-api_keys (id, merchant_id, key_hash, key_prefix, type, status, created_at)
-merchant_settings (id, merchant_id, webhook_url, settlement_schedule, ...)
-fee_plans (id, merchant_id, payment_method, percentage_fee, fixed_fee)
+merchants (id, user_id, business_name, business_type, status, kyc_verified, mdr_percentage, ...)
+api_keys (id, merchant_id, secret_key_hash, public_key, key_prefix, key_type, status, created_at)
 ```
 
 **API Key Types:**
-- `sk_test_*` — Test mode (simulated payments)
-- `sk_live_*` — Live mode (real payments)
+- `pk_test_*` / `sk_test_*` — Test mode (simulated payments)
+- `pk_live_*` / `sk_live_*` — Live mode (real payments)
 
 ---
 
@@ -239,8 +237,8 @@ fee_plans (id, merchant_id, payment_method, percentage_fee, fixed_fee)
 
 ```sql
 -- Tables
-orders (id, merchant_id, amount, currency, status, idempotency_key, ...)
-payments (id, order_id, method, status, fraud_score, auth_code, ...)
+orders (id, merchant_id, amount, currency, status, receipt, notes, expires_at, ...)
+payments (id, order_id, method, status, risk_score, auth_code, idempotency_key, ...)
 refunds (id, payment_id, amount, reason, status, ...)
 ```
 

@@ -52,22 +52,22 @@ This document provides the **complete database design** for PayFlow, including:
 ### users
 
 ```sql
-CREATE TABLE identity.users (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE IF NOT EXISTS identity.users (
+    id              VARCHAR(50) PRIMARY KEY,   -- usr_xxxxxxxxxx format
     email           VARCHAR(255) NOT NULL UNIQUE,
     password_hash   VARCHAR(255) NOT NULL,
-    first_name      VARCHAR(100) NOT NULL,
-    last_name       VARCHAR(100) NOT NULL,
-    role            VARCHAR(20) DEFAULT 'MERCHANT',
-    status          VARCHAR(20) DEFAULT 'ACTIVE',
-    merchant_id     UUID,
-    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login_at   TIMESTAMP
+    full_name       VARCHAR(100) NOT NULL,
+    phone           VARCHAR(20),
+    role            VARCHAR(20) NOT NULL DEFAULT 'CUSTOMER',
+    email_verified  BOOLEAN NOT NULL DEFAULT FALSE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    last_login_at   TIMESTAMP,
+    created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_users_email ON identity.users(email);
-CREATE INDEX idx_users_merchant ON identity.users(merchant_id);
+CREATE INDEX idx_users_status ON identity.users(status);
 ```
 
 ---
@@ -77,44 +77,50 @@ CREATE INDEX idx_users_merchant ON identity.users(merchant_id);
 ### merchants
 
 ```sql
-CREATE TABLE merchant.merchants (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    business_name       VARCHAR(255) NOT NULL,
-    business_type       VARCHAR(50) NOT NULL,
-    email               VARCHAR(255) NOT NULL UNIQUE,
-    phone               VARCHAR(20),
-    website             VARCHAR(255),
-    status              VARCHAR(20) DEFAULT 'PENDING',
-    kyc_status          VARCHAR(20) DEFAULT 'PENDING',
-    settlement_schedule VARCHAR(10) DEFAULT 'T+2',
-    webhook_url         VARCHAR(500),
-    webhook_secret      VARCHAR(64),
-    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS merchant.merchants (
+    id                      VARCHAR(50) PRIMARY KEY,  -- merch_xxxxxxxxxx format
+    user_id                 VARCHAR(50) NOT NULL,     -- Reference to identity.users
+    business_name           VARCHAR(200) NOT NULL,
+    business_type           VARCHAR(50) NOT NULL,
+    registration_number     VARCHAR(100),
+    gst_number              VARCHAR(20),
+    website_url             VARCHAR(500),
+    callback_url            VARCHAR(500),
+    webhook_url             VARCHAR(500),
+    webhook_secret          VARCHAR(255),
+    settlement_schedule     VARCHAR(10) NOT NULL DEFAULT 'T+2',
+    mdr_percentage          DECIMAL(5,2) NOT NULL DEFAULT 2.00,
+    bank_account_number     VARCHAR(30),
+    bank_ifsc_code          VARCHAR(15),
+    bank_account_holder     VARCHAR(200),
+    status                  VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    kyc_verified            BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_merchants_email ON merchant.merchants(email);
+CREATE INDEX idx_merchants_user ON merchant.merchants(user_id);
 CREATE INDEX idx_merchants_status ON merchant.merchants(status);
 ```
 
 ### api_keys
 
 ```sql
-CREATE TABLE merchant.api_keys (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    merchant_id     UUID NOT NULL REFERENCES merchant.merchants(id),
-    key_prefix      VARCHAR(20) NOT NULL,
-    key_hash        VARCHAR(64) NOT NULL UNIQUE,
-    name            VARCHAR(100),
-    environment     VARCHAR(10) NOT NULL,
-    status          VARCHAR(20) DEFAULT 'ACTIVE',
+CREATE TABLE IF NOT EXISTS merchant.api_keys (
+    id              VARCHAR(50) PRIMARY KEY,  -- key_xxxxxxxxxx format
+    merchant_id     VARCHAR(50) NOT NULL REFERENCES merchant.merchants(id),
+    key_type        VARCHAR(10) NOT NULL,     -- 'live' or 'test'
+    public_key      VARCHAR(100) NOT NULL UNIQUE,
+    secret_key_hash VARCHAR(255) NOT NULL,
+    key_prefix      VARCHAR(30) NOT NULL,
+    status          VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     last_used_at    TIMESTAMP,
-    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    revoked_at      TIMESTAMP
+    created_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_api_keys_merchant ON merchant.api_keys(merchant_id);
-CREATE INDEX idx_api_keys_hash ON merchant.api_keys(key_hash);
+CREATE INDEX idx_api_keys_public ON merchant.api_keys(public_key);
+CREATE INDEX idx_api_keys_hash ON merchant.api_keys(secret_key_hash);
 ```
 
 ---
@@ -124,82 +130,76 @@ CREATE INDEX idx_api_keys_hash ON merchant.api_keys(key_hash);
 ### orders
 
 ```sql
-CREATE TABLE payment.orders (
-    id                  VARCHAR(30) PRIMARY KEY,
-    merchant_id         UUID NOT NULL,
-    amount              BIGINT NOT NULL,
-    currency            VARCHAR(3) DEFAULT 'INR',
-    status              VARCHAR(20) DEFAULT 'CREATED',
-    description         VARCHAR(500),
-    merchant_order_id   VARCHAR(100),
-    customer_email      VARCHAR(255),
-    customer_phone      VARCHAR(20),
-    metadata            JSONB,
-    expires_at          TIMESTAMP,
-    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS payment.orders (
+    id              VARCHAR(50) PRIMARY KEY,   -- ord_xxxxxxxxxx format
+    merchant_id     VARCHAR(50) NOT NULL,
+    amount          DECIMAL(12,2) NOT NULL,
+    currency        VARCHAR(3) NOT NULL DEFAULT 'INR',
+    receipt         VARCHAR(100),
+    status          VARCHAR(20) NOT NULL DEFAULT 'CREATED',
+    notes           JSONB,
+    expires_at      TIMESTAMP NOT NULL,
+    paid_at         TIMESTAMP,
+    created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_orders_merchant ON payment.orders(merchant_id);
 CREATE INDEX idx_orders_status ON payment.orders(status);
-CREATE INDEX idx_orders_created ON payment.orders(created_at);
 ```
 
 
 ### payments
 
 ```sql
-CREATE TABLE payment.payments (
-    id                  VARCHAR(30) PRIMARY KEY,
-    order_id            VARCHAR(30) NOT NULL REFERENCES payment.orders(id),
-    merchant_id         UUID NOT NULL,
-    amount              BIGINT NOT NULL,
-    currency            VARCHAR(3) DEFAULT 'INR',
-    status              VARCHAR(20) DEFAULT 'CREATED',
+CREATE TABLE IF NOT EXISTS payment.payments (
+    id                  VARCHAR(50) PRIMARY KEY,  -- pay_xxxxxxxxxx format
+    order_id            VARCHAR(50) NOT NULL REFERENCES payment.orders(id),
+    merchant_id         VARCHAR(50) NOT NULL,
+    amount              DECIMAL(12,2) NOT NULL,
+    currency            VARCHAR(3) NOT NULL DEFAULT 'INR',
+    status              VARCHAR(20) NOT NULL DEFAULT 'CREATED',
     payment_method      VARCHAR(20) NOT NULL,
-    card_last_four      VARCHAR(4),
-    card_brand          VARCHAR(20),
+    card_last4          VARCHAR(4),
+    card_network        VARCHAR(20),
     upi_vpa             VARCHAR(100),
-    bank_code           VARCHAR(20),
-    auth_code           VARCHAR(20),
-    rrn                 VARCHAR(30),
-    acquirer_code       VARCHAR(10),
-    fraud_score         INTEGER,
-    error_code          VARCHAR(20),
-    error_message       VARCHAR(500),
-    idempotency_key     VARCHAR(64) UNIQUE,
-    captured_amount     BIGINT DEFAULT 0,
-    refunded_amount     BIGINT DEFAULT 0,
-    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    auth_code           VARCHAR(10),
+    rrn                 VARCHAR(20),
+    idempotency_key     VARCHAR(100),
+    risk_score          INTEGER,
+    route_id            VARCHAR(50),
+    captured_amount     DECIMAL(12,2) DEFAULT 0.00,
+    refunded_amount     DECIMAL(12,2) DEFAULT 0.00,
+    failure_code        VARCHAR(50),
+    failure_reason      VARCHAR(500),
     authorized_at       TIMESTAMP,
-    captured_at         TIMESTAMP
+    captured_at         TIMESTAMP,
+    created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_payments_order ON payment.payments(order_id);
 CREATE INDEX idx_payments_merchant ON payment.payments(merchant_id);
 CREATE INDEX idx_payments_status ON payment.payments(status);
-CREATE INDEX idx_payments_idempotency ON payment.payments(idempotency_key);
+CREATE INDEX idx_payments_idempotency ON payment.payments(merchant_id, idempotency_key);
 ```
 
 ### refunds
 
 ```sql
-CREATE TABLE payment.refunds (
-    id              VARCHAR(30) PRIMARY KEY,
-    payment_id      VARCHAR(30) NOT NULL REFERENCES payment.payments(id),
-    merchant_id     UUID NOT NULL,
-    amount          BIGINT NOT NULL,
-    status          VARCHAR(20) DEFAULT 'PENDING',
+CREATE TABLE IF NOT EXISTS payment.refunds (
+    id              VARCHAR(50) PRIMARY KEY,  -- rfnd_xxxxxxxxxx format
+    payment_id      VARCHAR(50) NOT NULL REFERENCES payment.payments(id),
+    merchant_id     VARCHAR(50) NOT NULL,
+    amount          DECIMAL(12,2) NOT NULL,
+    status          VARCHAR(20) NOT NULL DEFAULT 'INITIATED',
     reason          VARCHAR(500),
-    rrn             VARCHAR(30),
-    idempotency_key VARCHAR(64) UNIQUE,
-    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    rrn             VARCHAR(20),
+    created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     processed_at    TIMESTAMP
 );
 
 CREATE INDEX idx_refunds_payment ON payment.refunds(payment_id);
-CREATE INDEX idx_refunds_merchant ON payment.refunds(merchant_id);
 ```
 
 ---
@@ -209,25 +209,28 @@ CREATE INDEX idx_refunds_merchant ON payment.refunds(merchant_id);
 ### settlements
 
 ```sql
-CREATE TABLE settlement.settlements (
-    id              VARCHAR(30) PRIMARY KEY,
-    merchant_id     UUID NOT NULL,
-    period_start    DATE NOT NULL,
-    period_end      DATE NOT NULL,
-    gross_amount    BIGINT NOT NULL,
-    fee_amount      BIGINT NOT NULL,
-    tax_amount      BIGINT NOT NULL,
-    net_amount      BIGINT NOT NULL,
-    transaction_count INTEGER NOT NULL,
-    refund_count    INTEGER DEFAULT 0,
-    status          VARCHAR(20) DEFAULT 'PENDING',
-    payout_reference VARCHAR(50),
-    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    settled_at      TIMESTAMP
+CREATE TABLE IF NOT EXISTS settlement.settlements (
+    id                      VARCHAR(50) PRIMARY KEY,  -- stl_xxxxxxxxxx format
+    merchant_id             VARCHAR(50) NOT NULL,
+    settlement_date         DATE NOT NULL,
+    gross_amount            DECIMAL(14,2) NOT NULL,
+    refund_amount           DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+    fee_amount              DECIMAL(14,2) NOT NULL,
+    gst_on_fee              DECIMAL(14,2) NOT NULL,
+    net_amount              DECIMAL(14,2) NOT NULL,
+    total_transactions      INTEGER NOT NULL DEFAULT 0,
+    total_refunds           INTEGER NOT NULL DEFAULT 0,
+    status                  VARCHAR(20) NOT NULL DEFAULT 'INITIATED',
+    payout_utr              VARCHAR(50),
+    processed_at            TIMESTAMP,
+    created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(merchant_id, settlement_date)
 );
 
 CREATE INDEX idx_settlements_merchant ON settlement.settlements(merchant_id);
-CREATE INDEX idx_settlements_period ON settlement.settlements(period_start, period_end);
+CREATE INDEX idx_settlements_date ON settlement.settlements(settlement_date DESC);
+CREATE INDEX idx_settlements_status ON settlement.settlements(status);
 ```
 
 ---
@@ -267,8 +270,8 @@ CREATE INDEX idx_settlements_period ON settlement.settlements(period_start, peri
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   ┌──────────┐         ┌──────────┐         ┌──────────┐                   │
-│   │  users   │ N:1     │ merchants│ 1:N     │ api_keys │                   │
-│   │          │────────►│          │────────►│          │                   │
+│   │  users   │ 1:N     │ merchants│ 1:N     │ api_keys │                   │
+│   │          │◄────────│ (user_id)│────────►│          │                   │
 │   └──────────┘         └──────────┘         └──────────┘                   │
 │                              │                                               │
 │                              │ 1:N                                          │

@@ -10,6 +10,8 @@ import java.util.Optional;
 @Repository
 public interface ApiKeyRepository extends JpaRepository<ApiKey, String> {
 
+    List<ApiKey> findByMerchantId(String merchantId);
+
     List<ApiKey> findByMerchantIdAndStatus(String merchantId, ApiKey.KeyStatus status);
 
     Optional<ApiKey> findBySecretKeyHashAndStatus(String secretKeyHash, ApiKey.KeyStatus status);

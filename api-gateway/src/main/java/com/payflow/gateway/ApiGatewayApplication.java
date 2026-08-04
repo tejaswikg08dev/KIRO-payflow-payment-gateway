@@ -2,6 +2,8 @@ package com.payflow.gateway;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * API Gateway — The single entry point for ALL external requests.
@@ -31,5 +33,14 @@ public class ApiGatewayApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ApiGatewayApplication.class, args);
+    }
+
+    /**
+     * WebClient bean for making HTTP calls to internal services.
+     * Used by ApiKeyAuthFilter to validate API keys against merchant-service.
+     */
+    @Bean
+    public WebClient.Builder webClientBuilder() {
+        return WebClient.builder();
     }
 }

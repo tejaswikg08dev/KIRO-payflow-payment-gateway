@@ -24,8 +24,9 @@ Create a new user account.
 {
   "email": "john@example.com",
   "password": "SecurePass123!",
-  "firstName": "John",
-  "lastName": "Doe"
+  "fullName": "John Doe",
+  "phone": "+919876543210",
+  "role": "MERCHANT"
 }
 ```
 
@@ -34,8 +35,16 @@ Create a new user account.
 {
   "success": true,
   "data": {
-    "userId": "usr_abc123",
-    "email": "john@example.com"
+    "accessToken": "eyJhbGc...",
+    "refreshToken": "eyJhbGc...",
+    "tokenType": "Bearer",
+    "expiresIn": 900,
+    "user": {
+      "userId": "usr_abc123xyz",
+      "email": "john@example.com",
+      "fullName": "John Doe",
+      "role": "MERCHANT"
+    }
   }
 }
 ```
@@ -58,13 +67,20 @@ Authenticate and get JWT tokens.
   "data": {
     "accessToken": "eyJhbGc...",
     "refreshToken": "eyJhbGc...",
-    "expiresIn": 900
+    "tokenType": "Bearer",
+    "expiresIn": 900,
+    "user": {
+      "userId": "usr_abc123xyz",
+      "email": "john@example.com",
+      "fullName": "John Doe",
+      "role": "MERCHANT"
+    }
   }
 }
 ```
 
 ### POST /v1/auth/refresh
-Get new access token using refresh token.
+Get new access token using refresh token. (Not yet implemented)
 
 ---
 
@@ -76,11 +92,17 @@ Create a new merchant account.
 **Request:**
 ```json
 {
+  "userId": "usr_abc123xyz",
   "businessName": "Acme Corp",
   "businessType": "ECOMMERCE",
-  "email": "business@acme.com",
-  "phone": "+919876543210",
-  "website": "https://acme.com"
+  "registrationNumber": "CIN123456",
+  "gstNumber": "29XXXXXXXXXX",
+  "websiteUrl": "https://acme.com",
+  "callbackUrl": "https://acme.com/callback",
+  "webhookUrl": "https://acme.com/webhooks/payflow",
+  "bankAccountNumber": "1234567890",
+  "bankIfscCode": "HDFC0001234",
+  "bankAccountHolder": "Acme Corp Pvt Ltd"
 }
 ```
 
@@ -89,35 +111,38 @@ Create a new merchant account.
 {
   "success": true,
   "data": {
-    "id": "merch_abc123",
+    "id": "merch_abc123xyz",
+    "userId": "usr_abc123xyz",
     "businessName": "Acme Corp",
-    "status": "PENDING"
+    "businessType": "ECOMMERCE",
+    "status": "PENDING",
+    "kycVerified": false,
+    "settlementSchedule": "T+2",
+    "mdrPercentage": 2.00
   }
 }
 ```
 
-### POST /v1/merchants/{id}/api-keys
+### GET /v1/merchants/{merchantId}
+Get merchant details.
+
+### POST /v1/merchants/{merchantId}/api-keys
 Generate new API keys.
 
+**Query Parameters:**
+- `keyType` (optional): `TEST` or `LIVE` (default: TEST)
+
 **Response (201):**
 ```json
 {
   "success": true,
   "data": {
-    "testKey": "sk_test_xxxxxxxxxxxxx",
-    "liveKey": "sk_live_xxxxxxxxxxxxx"
+    "key_id": "key_xyz789abc",
+    "key_type": "TEST",
+    "public_key": "pk_test_xxxxxxxxxxxxx",
+    "secret_key": "sk_test_xxxxxxxxxxxxx",
+    "note": "Save the secret_key now. It will NOT be shown again."
   }
-}
-```
-
-### PUT /v1/merchants/{id}/webhook
-Configure webhook URL.
-
-**Request:**
-```json
-{
-  "webhookUrl": "https://acme.com/webhooks/payflow",
-  "events": ["payment.authorized", "payment.captured", "refund.processed"]
 }
 ```
 

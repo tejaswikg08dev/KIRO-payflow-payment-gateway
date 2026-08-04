@@ -55,7 +55,7 @@ String json = """
 
 ---
 
-### 1.2 Spring Boot 3.2
+### 1.2 Spring Boot 3.2.5
 
 **What is it?**
 Spring Boot is a framework that makes it easy to create production-ready Java applications with minimal configuration.

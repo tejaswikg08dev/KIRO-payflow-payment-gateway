@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
+import ApiKeysPage from './pages/ApiKeysPage';
 
 function App() {
   return (
@@ -9,6 +10,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/transactions" element={<TransactionsPage />} />
+      <Route path="/api-keys" element={<ApiKeysPage />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

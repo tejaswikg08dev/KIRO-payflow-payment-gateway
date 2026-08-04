@@ -24,6 +24,7 @@ common-lib/
     │   ├── PayflowException.java   # Base exception
     │   ├── ResourceNotFoundException.java
     │   ├── DuplicateResourceException.java
+    │   ├── InvalidStateTransitionException.java
     │   └── GlobalExceptionHandler.java
     └── util/
         └── IdGenerator.java        # Generate pay_xxx, ord_xxx
@@ -32,18 +33,42 @@ common-lib/
 ### 1.2 ID Generation Pattern
 
 ```java
+/**
+ * Generates short, URL-friendly, unique IDs for all PayFlow entities.
+ * 
+ * Format: {prefix}_{10-character-alphanumeric}
+ * 
+ * Examples:
+ *   pay_Hk7mN3xQp2   (payment)
+ *   ord_LkR3d9xF2m   (order)
+ *   rfnd_Qm4nP8wXv3  (refund)
+ * 
+ * Collision probability:
+ * - 10 chars from 62-char alphabet = 62^10 = 839 trillion possibilities
+ */
 public class IdGenerator {
-    public static String generateOrderId() {
-        return "ord_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+
+    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int ID_LENGTH = 10;
+
+    public static String generateId(String prefix) {
+        StringBuilder sb = new StringBuilder(prefix.length() + 1 + ID_LENGTH);
+        sb.append(prefix).append('_');
+        for (int i = 0; i < ID_LENGTH; i++) {
+            sb.append(ALPHABET.charAt(RANDOM.nextInt(ALPHABET.length())));
+        }
+        return sb.toString();
     }
-    
-    public static String generatePaymentId() {
-        return "pay_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-    }
-    
-    public static String generateRefundId() {
-        return "ref_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-    }
+
+    public static String orderId()      { return generateId("ord"); }
+    public static String paymentId()    { return generateId("pay"); }
+    public static String refundId()     { return generateId("rfnd"); }
+    public static String merchantId()   { return generateId("merch"); }
+    public static String apiKeyId()     { return generateId("key"); }
+    public static String eventId()      { return generateId("evt"); }
+    public static String settlementId() { return generateId("stl"); }
+    public static String userId()       { return generateId("usr"); }
 }
 ```
 
@@ -55,21 +80,22 @@ public class IdGenerator {
 
 ```java
 public enum PaymentStatus {
-    CREATED,
-    PROCESSING,
-    AUTHORIZED,
-    CAPTURED,
-    VOIDED,
-    REFUNDED,
-    FAILED,
-    SETTLED
+    CREATED,      // Order created, waiting for customer payment
+    PROCESSING,   // Payment submitted, talking to bank
+    AUTHORIZED,   // Bank approved, money HELD on card
+    CAPTURED,     // Merchant confirmed, money DEDUCTED
+    SETTLED,      // Money transferred to merchant (batch)
+    VOIDED,       // Cancelled before capture (hold released)
+    REFUNDED,     // Money returned to customer after capture
+    FAILED,       // Bank declined or error occurred
+    EXPIRED       // Customer didn't complete in time
 }
 
 public class PaymentStateMachine {
     private static final Map<PaymentStatus, Set<PaymentStatus>> TRANSITIONS = Map.of(
-        CREATED, Set.of(PROCESSING, FAILED),
+        CREATED, Set.of(PROCESSING, EXPIRED, FAILED),
         PROCESSING, Set.of(AUTHORIZED, FAILED),
-        AUTHORIZED, Set.of(CAPTURED, VOIDED, FAILED),
+        AUTHORIZED, Set.of(CAPTURED, VOIDED, EXPIRED, FAILED),
         CAPTURED, Set.of(REFUNDED, SETTLED),
         SETTLED, Set.of(REFUNDED)
     );

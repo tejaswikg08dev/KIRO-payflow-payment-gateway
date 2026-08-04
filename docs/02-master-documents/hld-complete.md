@@ -141,8 +141,8 @@ This document provides the **high-level architecture** of PayFlow Payment Gatewa
 | Category | Technology | Version | Purpose |
 |----------|------------|---------|---------|
 | **Language** | Java | 17 (LTS) | Primary backend language |
-| **Framework** | Spring Boot | 3.x | Microservices framework |
-| **Cloud** | Spring Cloud | 2023.x | Service discovery, config, gateway |
+| **Framework** | Spring Boot | 3.2.5 | Microservices framework |
+| **Cloud** | Spring Cloud | 2023.0.1 | Service discovery, config, gateway |
 | **Security** | Spring Security | 6.x | Authentication, authorization |
 | **ORM** | Spring Data JPA | 3.x | Database access |
 | **Batch** | Spring Batch | 5.x | Settlement batch processing |
@@ -332,7 +332,7 @@ This document provides the **high-level architecture** of PayFlow Payment Gatewa
 │                     Local Development Stack                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│   docker-compose.infra.yml (Infrastructure Only)                            │
+│   docker-compose-infra.yml (Infrastructure Only)                            │
 │   ┌─────────────────────────────────────────────────────────────────┐       │
 │   │  PostgreSQL :5432  │  Redis :6379  │  LocalStack :4566/:8000   │       │
 │   │  (4 schemas)       │  (caching)    │  (SQS, SNS, DynamoDB)     │       │
@@ -418,7 +418,7 @@ This document provides the **high-level architecture** of PayFlow Payment Gatewa
 payflow-payment-gateway/
 ├── pom.xml                      ← Parent POM (all modules)
 ├── docker-compose.yml           ← Full stack
-├── docker-compose.infra.yml     ← Infrastructure only
+├── docker-compose-infra.yml     ← Infrastructure only
 ├── .github/workflows/           ← CI/CD pipelines
 ├── docs/                        ← Documentation
 │
@@ -435,9 +435,9 @@ payflow-payment-gateway/
 ├── notification-service/        ← Email/SMS
 ├── bank-simulator/              ← Bank mock
 │
-├── merchant-portal/             ← React dashboard
-├── hosted-checkout/             ← React checkout
-└── developer-portal/            ← React dev docs
+├── frontend-dashboard/          ← React dashboard (merchant portal)
+├── frontend-checkout/           ← React checkout (hosted checkout)
+└── frontend-developer-portal/   ← React dev docs
 ```
 
 ---

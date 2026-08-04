@@ -329,7 +329,7 @@ dir
 
 ```powershell
 # Start PostgreSQL and Redis
-docker compose -f docker-compose.infra.yml up -d
+docker compose -f docker-compose-infra.yml up -d
 
 # Verify containers are running
 docker ps
@@ -377,7 +377,7 @@ npm run dev
 
 ```powershell
 # Stop Docker containers
-docker compose -f docker-compose.infra.yml down
+docker compose -f docker-compose-infra.yml down
 
 # Verify containers stopped
 docker ps
@@ -500,7 +500,7 @@ docker ps
 │                                                                              │
 │   START DEVELOPMENT SESSION:                                                 │
 │   1. Open Docker Desktop (wait for startup)                                 │
-│   2. docker compose -f docker-compose.infra.yml up -d                       │
+│   2. docker compose -f docker-compose-infra.yml up -d                       │
 │   3. Open IntelliJ → PayFlow project                                        │
 │   4. Run service (Shift+F10)                                                │
 │                                                                              │
@@ -516,7 +516,7 @@ docker ps
 │                                                                              │
 │   END SESSION:                                                               │
 │   1. Stop running services (Ctrl+C)                                         │
-│   2. docker compose -f docker-compose.infra.yml down                        │
+│   2. docker compose -f docker-compose-infra.yml down                        │
 │   3. git add . && git commit -m "message" && git push                       │
 │                                                                              │
 │   USEFUL COMMANDS:                                                           │

@@ -90,12 +90,18 @@ function DashboardPage() {
         </div>
 
         {/* Quick Links */}
-        <div className="mt-8">
+        <div className="mt-8 flex gap-4">
           <button
             onClick={() => navigate('/transactions')}
             className="rounded bg-primary px-4 py-2 text-white hover:bg-primary-dark"
           >
             View Transactions
+          </button>
+          <button
+            onClick={() => navigate('/api-keys')}
+            className="rounded border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100"
+          >
+            Manage API Keys
           </button>
         </div>
       </main>
