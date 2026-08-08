@@ -292,12 +292,10 @@ mkdir identity-service\src\main\java\com\payflow\identity\config
 mkdir identity-service\src\main\java\com\payflow\identity\controller
 mkdir identity-service\src\main\java\com\payflow\identity\dto
 mkdir identity-service\src\main\java\com\payflow\identity\model
-mkdir identity-service\src\main\java\com\payflow\identity\exception
 mkdir identity-service\src\main\java\com\payflow\identity\repository
 mkdir identity-service\src\main\java\com\payflow\identity\service
 mkdir identity-service\src\main\resources
 mkdir identity-service\src\main\resources\db\migration
-mkdir identity-service\src\main\resources\keys
 mkdir identity-service\src\test\java\com\payflow\identity
 
 # Verify structure
@@ -314,8 +312,7 @@ identity-service/
 │   │   │       ├── config/
 │   │   │       ├── controller/
 │   │   │       ├── dto/
-│   │   │       ├── entity/
-│   │   │       ├── exception/
+│   │   │       ├── model/
 │   │   │       ├── repository/
 │   │   │       └── service/
 │   │   └── resources/
@@ -905,16 +902,12 @@ identity-service/
 │   │   │       │   └── SecurityConfig.java
 │   │   │       ├── controller/     (empty - created in Part 07)
 │   │   │       ├── dto/            (empty - created in Part 05)
-│   │   │       ├── entity/         (empty - created in Part 05)
-│   │   │       ├── exception/      (empty - created in Part 07)
+│   │   │       ├── model/          (empty - created in Part 05)
 │   │   │       ├── repository/     (empty - created in Part 05)
 │   │   │       └── service/        (empty - created in Part 06)
 │   │   └── resources/
 │   │       ├── application.yml
-│   │       ├── db/migration/       (empty - created in Part 05)
-│   │       └── keys/
-│   │           ├── private.pem
-│   │           └── public.pem
+│   │       └── db/migration/       (empty - created in Part 05)
 │   └── test/
 │       └── java/com/payflow/identity/
 ```
