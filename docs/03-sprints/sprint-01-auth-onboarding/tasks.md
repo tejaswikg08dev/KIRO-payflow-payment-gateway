@@ -219,13 +219,13 @@ docker exec payflow-postgres psql -U postgres -d payflow -c "\dt identity.*"
 
 ### Tasks
 
-- [ ] Generate RSA key pair (private.pem, public.pem)
-- [ ] Create JwtTokenProvider.java in security/ package
-- [ ] Implement generateToken() method
+- [ ] Configure JWT secret in application.yml (256+ bit secret)
+- [ ] Create JwtService.java in service/ package
+- [ ] Implement generateAccessToken() method
+- [ ] Implement generateRefreshToken() method
 - [ ] Implement validateToken() method
-- [ ] Implement getUserIdFromToken() method
-- [ ] Configure token expiration (24 hours)
-- [ ] Create JwtAuthenticationFilter.java
+- [ ] Implement extractUserId() method
+- [ ] Configure token expiration (15 min access, 7 days refresh)
 - [ ] Create SecurityConfig.java
 - [ ] Configure BCrypt password encoder
 - [ ] Configure public endpoints
@@ -233,9 +233,8 @@ docker exec payflow-postgres psql -U postgres -d payflow -c "\dt identity.*"
 ### Verification
 
 ```powershell
-# Generate keys (if not done)
-openssl genrsa -out private.pem 2048
-openssl rsa -in private.pem -pubout -out public.pem
+# Verify JWT configuration exists in application.yml
+# jwt.secret should be at least 32 characters for HS256
 ```
 
 ---

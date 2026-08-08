@@ -260,7 +260,7 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           JWT TOKEN ANATOMY                                  │
 │                                                                              │
-│  Token: eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIn0.signature │
+│  Token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIn0.signature │
 │         │                    │                                │              │
 │         │                    │                                │              │
 │         ▼                    ▼                                ▼              │
@@ -271,7 +271,7 @@
 │                                                                              │
 │  Header (Base64 decoded):                                                    │
 │  {                                                                           │
-│    "alg": "RS256",     ← Algorithm (RSA + SHA-256)                          │
+│    "alg": "HS256",     ← Algorithm (HMAC + SHA-256)                         │
 │    "typ": "JWT"        ← Token type                                         │
 │  }                                                                           │
 │                                                                              │
@@ -285,15 +285,15 @@
 │  }                                                                           │
 │                                                                              │
 │  Signature:                                                                  │
-│  RSASHA256(                                                                  │
+│  HMACSHA256(                                                                 │
 │    base64UrlEncode(header) + "." + base64UrlEncode(payload),               │
-│    privateKey                                                                │
+│    secretKey                                                                 │
 │  )                                                                           │
 │                                                                              │
-│  Why RS256?                                                                  │
-│  • Private key: Only identity-service has it (to SIGN tokens)               │
-│  • Public key: All services have it (to VERIFY tokens)                      │
-│  • Safer than symmetric (HMAC) - no shared secret                           │
+│  Why HS256?                                                                  │
+│  • Single service (identity-service) handles all auth                       │
+│  • Simpler than RSA key pairs - just one secret key                         │
+│  • Secret key stored securely in application config                         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -456,7 +456,7 @@ CREATE INDEX idx_merchants_user_id ON merchant.merchants(user_id);
 │  │       • findByEmail(email)                                               │
 │  │       • existsByEmail(email)                                             │
 │  │                                                                           │
-│  ├── entity/                                                                 │
+│  ├── model/                                                                  │
 │  │   └── User.java                       ← JPA entity                       │
 │  │       @Entity @Table(schema="identity")                                  │
 │  │                                                                           │
@@ -507,7 +507,7 @@ CREATE INDEX idx_merchants_user_id ON merchant.merchants(user_id);
 │  │       • findByUserId(userId)                                             │
 │  │       • existsByUserId(userId)                                           │
 │  │                                                                           │
-│  ├── entity/                                                                 │
+│  ├── model/                                                                  │
 │  │   └── Merchant.java                   ← JPA entity                       │
 │  │       @Entity @Table(schema="merchant")                                  │
 │  │                                                                           │
@@ -827,7 +827,7 @@ services:
 | Service Discovery | Eureka | Spring Cloud native, battle-tested |
 | Config Management | Spring Cloud Config | Centralized, supports profiles |
 | API Gateway | Spring Cloud Gateway | Reactive, filter-based |
-| Auth | JWT + RS256 | Stateless, asymmetric security |
+| Auth | JWT + HS256 | Stateless, simple HMAC secret key |
 | Password Hashing | BCrypt | Industry standard, configurable cost |
 | Frontend | React + TypeScript | Type safety, large ecosystem |
 | Build Tool | Vite | Fast HMR, modern tooling |

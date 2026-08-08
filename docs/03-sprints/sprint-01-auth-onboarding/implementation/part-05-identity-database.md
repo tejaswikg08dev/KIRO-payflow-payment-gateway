@@ -869,7 +869,7 @@ import com.payflow.identity.model.User;
 │  In Part 06, we'll create:                                                  │
 │  • JwtService for token generation                                         │
 │  • AuthService for login/register logic                                    │
-│  • Token signing with RSA keys                                             │
+│  • Token signing with HMAC secret (HS256)                                  │
 │  • Password hashing with BCrypt                                            │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │

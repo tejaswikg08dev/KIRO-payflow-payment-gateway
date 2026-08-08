@@ -108,7 +108,7 @@ In this part, you'll set up the **Identity Service** foundation - the service re
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │  HEADER (Base64 encoded)                                             │   │
 │  │  {                                                                   │   │
-│  │    "alg": "RS256",    // Algorithm: RSA with SHA-256               │   │
+│  │    "alg": "HS256",    // Algorithm: HMAC with SHA-256              │   │
 │  │    "typ": "JWT"       // Token type                                 │   │
 │  │  }                                                                   │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -127,13 +127,12 @@ In this part, you'll set up the **Identity Service** foundation - the service re
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │  SIGNATURE                                                           │   │
 │  │                                                                      │   │
-│  │  RS256(                                                              │   │
+│  │  HMACSHA256(                                                         │   │
 │  │    base64(header) + "." + base64(payload),                          │   │
-│  │    privateKey                                                        │   │
+│  │    secretKey                                                         │   │
 │  │  )                                                                   │   │
 │  │                                                                      │   │
-│  │  Only someone with private key can CREATE valid signature           │   │
-│  │  Anyone with public key can VERIFY signature                        │   │
+│  │  Only someone with secret key can CREATE or VERIFY signature        │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  IMPORTANT: Payload is NOT encrypted! Anyone can decode and read it.       │
@@ -316,8 +315,7 @@ identity-service/
 │   │   │       ├── repository/
 │   │   │       └── service/
 │   │   └── resources/
-│   │       ├── db/migration/
-│   │       └── keys/
+│   │       └── db/migration/
 │   └── test/
 │       └── java/
 │           └── com/payflow/identity/
@@ -668,15 +666,14 @@ eureka:
 # ─────────────────────────────────────────────────────────────────────────────
 jwt:
   # ┌─────────────────────────────────────────────────────────────────────────┐
-  # │ PRIVATE KEY: Used to SIGN tokens (only identity-service has this)     │
-  # │ PUBLIC KEY: Used to VERIFY tokens (gateway and other services)        │
+  # │ SECRET KEY: Used to SIGN and VERIFY tokens                              │
+  # │ Must be at least 256 bits (32 characters) for HS256                     │
   # └─────────────────────────────────────────────────────────────────────────┘
-  private-key-path: classpath:keys/private.pem
-  public-key-path: classpath:keys/public.pem
+  secret: your-256-bit-secret-key-for-jwt-token-signing-replace-in-production
   
-  # Token expiration times
-  access-token-expiration: 900000      # 15 minutes in milliseconds
-  refresh-token-expiration: 604800000  # 7 days in milliseconds
+  # Token expiration times (milliseconds)
+  access-token-expiry: 900000      # 15 minutes
+  refresh-token-expiry: 604800000  # 7 days
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ACTUATOR
@@ -694,20 +691,19 @@ management:
 
 ---
 
-### Step 4.6: Copy RSA Keys
+### Step 4.6: Verify JWT Configuration
 
-Copy the RSA keys from api-gateway (or generate new ones):
+**Note:** PayFlow uses HMAC (HS256) for JWT signing, not RSA key pairs. This is simpler and sufficient for our architecture since the identity-service handles all token generation and validation.
 
-```powershell
-# Option 1: Copy from api-gateway
-copy api-gateway\src\main\resources\keys\*.pem identity-service\src\main\resources\keys\
-
-# Option 2: Generate new keys (if not done in Part 03)
-openssl genrsa -out identity-service\src\main\resources\keys\private.pem 2048
-openssl rsa -in identity-service\src\main\resources\keys\private.pem -pubout -out identity-service\src\main\resources\keys\public.pem
+The JWT secret is configured in `application.yml`:
+```yaml
+jwt:
+  secret: your-256-bit-secret-key-for-jwt-token-signing-replace-in-production
+  access-token-expiry: 900000      # 15 minutes
+  refresh-token-expiry: 604800000  # 7 days
 ```
 
-**Important:** In production, use the SAME key pair across all services. The private key should be kept secret and only accessible to the identity-service.
+**Important:** In production, use a strong random secret (at least 256 bits / 32 characters) stored in environment variables or a secrets manager.
 
 ---
 
@@ -955,22 +951,20 @@ identity-service/
 
 ## 8. Q&A / Troubleshooting
 
-### Q1: "Could not load JWT private key" error
+### Q1: "JWT secret key" not configured error
 
-**Cause:** Key file not found or wrong format.
+**Cause:** Missing or invalid JWT secret in application.yml.
 
 **Fix:**
-```powershell
-# Check files exist
-dir identity-service\src\main\resources\keys\
-
-# Verify key format (should start with -----BEGIN...)
-type identity-service\src\main\resources\keys\private.pem
-
-# Regenerate if corrupted
-openssl genrsa -out identity-service\src\main\resources\keys\private.pem 2048
-openssl rsa -in identity-service\src\main\resources\keys\private.pem -pubout -out identity-service\src\main\resources\keys\public.pem
+```yaml
+# Ensure jwt configuration exists in application.yml
+jwt:
+  secret: your-256-bit-secret-key-for-jwt-token-signing-replace-in-production
+  access-token-expiry: 900000
+  refresh-token-expiry: 604800000
 ```
+
+The secret must be at least 256 bits (32+ characters) for HS256 algorithm.
 
 ### Q2: "Connection refused" to PostgreSQL
 
@@ -1102,4 +1096,4 @@ You now have the Identity Service foundation with:
 - Project structure and dependencies
 - Spring Security configuration
 - Database connection setup
-- RSA key pair for JWT
+- JWT configuration with HMAC secret (HS256)

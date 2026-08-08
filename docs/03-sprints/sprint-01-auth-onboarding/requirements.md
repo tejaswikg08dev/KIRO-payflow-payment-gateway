@@ -119,7 +119,7 @@ GET /v1/merchants/me
 | ID | Requirement | Target |
 |----|-------------|--------|
 | NFR-1.1 | Passwords must be hashed with BCrypt (cost factor 12) | Must |
-| NFR-1.2 | JWT tokens must be signed with RS256 algorithm | Must |
+| NFR-1.2 | JWT tokens must be signed with HS256 algorithm (HMAC secret) | Must |
 | NFR-1.3 | API Gateway must validate JWT on all protected routes | Must |
 | NFR-1.4 | No plain-text credentials in logs | Must |
 
@@ -305,7 +305,7 @@ GET /v1/merchants/me
 |------|------------|
 | JWT | JSON Web Token - A compact, self-contained token for authentication |
 | BCrypt | Password hashing algorithm with salt |
-| RS256 | RSA Signature with SHA-256 (asymmetric algorithm) |
+| HS256 | HMAC Signature with SHA-256 (symmetric algorithm using secret key) |
 | Merchant | A business entity registered to accept payments |
 | Access Token | Short-lived token for API authentication |
 
