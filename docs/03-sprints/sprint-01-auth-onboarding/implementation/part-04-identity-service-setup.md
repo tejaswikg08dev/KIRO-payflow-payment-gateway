@@ -253,8 +253,8 @@ curl http://localhost:8080/actuator/health
 docker ps | findstr postgres
 # Expected: postgres container running
 
-# Check PostgreSQL connection
-docker exec -it postgres psql -U payflow -d payflow_identity -c "SELECT 1"
+# Check PostgreSQL connection and identity schema exists
+docker exec -it postgres psql -U payflow -d payflow -c "SELECT 1"
 # Expected: 1
 ```
 
@@ -344,110 +344,47 @@ identity-service/
 
     <artifactId>identity-service</artifactId>
     <name>PayFlow Identity Service</name>
-    <description>Authentication and user management service</description>
-
+    <description>User registration, login, JWT authentication</description>
 
     <dependencies>
-        
-        <!-- 
-        ┌─────────────────────────────────────────────────────────────────┐
-        │ SPRING BOOT WEB                                                 │
-        │                                                                  │
-        │ Provides:                                                        │
-        │ • Embedded Tomcat server                                         │
-        │ • REST controller support (@RestController)                     │
-        │ • JSON serialization (Jackson)                                  │
-        │ • Exception handling                                             │
-        └─────────────────────────────────────────────────────────────────┘
-        -->
+        <!-- Spring Web (REST controllers) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- 
-        ┌─────────────────────────────────────────────────────────────────┐
-        │ SPRING DATA JPA                                                 │
-        │                                                                  │
-        │ Provides:                                                        │
-        │ • ORM (Object-Relational Mapping)                               │
-        │ • Repository pattern (no SQL needed for basic CRUD)            │
-        │ • Transaction management                                        │
-        │ • Entity mapping (@Entity, @Column, etc.)                       │
-        └─────────────────────────────────────────────────────────────────┘
-        -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-
-        <!-- 
-        ┌─────────────────────────────────────────────────────────────────┐
-        │ SPRING VALIDATION                                               │
-        │                                                                  │
-        │ Provides:                                                        │
-        │ • @Valid annotation for request validation                      │
-        │ • @NotNull, @Email, @Size, etc. constraints                    │
-        │ • Automatic validation error responses                          │
-        └─────────────────────────────────────────────────────────────────┘
-        -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-
-        <!-- 
-        ┌─────────────────────────────────────────────────────────────────┐
-        │ SPRING SECURITY                                                 │
-        │                                                                  │
-        │ Provides:                                                        │
-        │ • Password encoding (BCrypt)                                    │
-        │ • Security filters                                              │
-        │ • CORS configuration                                            │
-        │ • CSRF protection (disabled for REST APIs)                     │
-        │                                                                  │
-        │ Note: We configure it minimally here.                           │
-        │ Full Spring Security is overkill for microservices -           │
-        │ JWT validation happens at Gateway level.                        │
-        └─────────────────────────────────────────────────────────────────┘
-        -->
+        <!-- Spring Security (authentication & authorization) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- PostgreSQL Driver -->
+        <!-- Spring Data JPA (database access) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- 
-        ┌─────────────────────────────────────────────────────────────────┐
-        │ FLYWAY                                                          │
-        │                                                                  │
-        │ Database migration tool. Provides:                               │
-        │ • Version-controlled database schema                            │
-        │ • Automatic migration on startup                                │
-        │ • Team collaboration on DB changes                              │
-        │                                                                  │
-        │ Migration files: src/main/resources/db/migration/              │
-        │ Naming: V1__description.sql, V2__description.sql               │
-        └─────────────────────────────────────────────────────────────────┘
-        -->
+        <!-- Flyway (database migrations) -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
         </dependency>
+
+        <!-- Validation (@NotNull, @Email, @Size) -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-
-        <!-- JWT Libraries -->
+        <!-- JWT library (create and validate tokens) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -472,50 +409,23 @@ identity-service/
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
-        <!-- Config Client -->
+        <!-- Swagger / OpenAPI -->
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-config</artifactId>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
-        <!-- Actuator -->
+        <!-- Our common library -->
+        <dependency>
+            <groupId>com.payflow</groupId>
+            <artifactId>common-lib</artifactId>
+        </dependency>
+
+        <!-- Actuator (health checks) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-
-        <!-- Lombok (reduces boilerplate code) -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Common Library -->
-        <dependency>
-            <groupId>com.payflow</groupId>
-            <artifactId>common-lib</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-
-        <!-- Test Dependencies -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
-
     </dependencies>
 
     <build>
@@ -523,20 +433,13 @@ identity-service/
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
             </plugin>
         </plugins>
     </build>
-
 </project>
 ```
+
+**Note:** Lombok is defined in the parent pom.xml, so it doesn't need to be declared here. The version for `springdoc-openapi-starter-webmvc-ui` and `common-lib` are also managed in the parent pom.
 
 ---
 
@@ -547,30 +450,30 @@ identity-service/
 ```java
 package com.payflow.identity;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.info.Contact;
+import io.swagger.v3.oas.annotations.info.Info;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
 /**
- * ═══════════════════════════════════════════════════════════════════════════
- * IDENTITY SERVICE APPLICATION
- * Authentication and User Management
- * ═══════════════════════════════════════════════════════════════════════════
- * 
- * This service handles:
- * • User registration
- * • User authentication (login)
- * • JWT token generation
- * • Token refresh
- * • Password management
- * 
+ * Identity Service Application - Authentication and User Management.
+ *
  * Key Endpoints:
- * ─────────────
- * POST /v1/auth/register   - Create new user account
- * POST /v1/auth/login      - Authenticate and get tokens
- * POST /v1/auth/refresh    - Get new access token using refresh token
- * POST /v1/auth/logout     - Invalidate refresh token
+ * - POST /v1/auth/register   - Create new user account
+ * - POST /v1/auth/login      - Authenticate and get tokens
  */
 @SpringBootApplication
+@ComponentScan(basePackages = {"com.payflow.identity", "com.payflow.common"})
+@OpenAPIDefinition(
+        info = @Info(
+                title = "PayFlow Identity Service API",
+                version = "1.0",
+                description = "User registration, login, and JWT token management",
+                contact = @Contact(name = "PayFlow Team")
+        )
+)
 public class IdentityServiceApplication {
 
     public static void main(String[] args) {
@@ -579,6 +482,9 @@ public class IdentityServiceApplication {
 }
 ```
 
+**Note:** 
+- `@ComponentScan` includes both `com.payflow.identity` and `com.payflow.common` packages (for common-lib)
+- `@OpenAPIDefinition` configures Swagger/OpenAPI documentation
 
 ---
 
@@ -587,9 +493,9 @@ public class IdentityServiceApplication {
 **File: `identity-service/src/main/resources/application.yml`**
 
 ```yaml
-# ═══════════════════════════════════════════════════════════════════════════
-# IDENTITY SERVICE CONFIGURATION
-# ═══════════════════════════════════════════════════════════════════════════
+# Identity Service — Local configuration
+# In production, config comes from Config Server.
+# This file is used for local development (running without Config Server).
 
 server:
   port: 8081
@@ -597,63 +503,30 @@ server:
 spring:
   application:
     name: identity-service
-    
-  # ─────────────────────────────────────────────────────────────────────────
-  # CONFIG SERVER
-  # ─────────────────────────────────────────────────────────────────────────
-  config:
-    import: optional:configserver:http://localhost:8888
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # DATABASE CONFIGURATION
-  # ─────────────────────────────────────────────────────────────────────────
   datasource:
-    # ┌─────────────────────────────────────────────────────────────────────┐
-    # │ JDBC URL Format:                                                    │
-    # │ jdbc:postgresql://host:port/database                               │
-    # │                                                                     │
-    # │ payflow_identity = Separate database for identity service          │
-    # │ Each microservice should have its own database (database per service)│
-    # └─────────────────────────────────────────────────────────────────────┘
-    url: jdbc:postgresql://localhost:5432/payflow_identity
+    url: jdbc:postgresql://localhost:5432/payflow?currentSchema=identity
     username: payflow
     password: payflow_secret
     driver-class-name: org.postgresql.Driver
-    
-  # ─────────────────────────────────────────────────────────────────────────
-  # JPA CONFIGURATION
-  # ─────────────────────────────────────────────────────────────────────────
   jpa:
     hibernate:
-      # ┌─────────────────────────────────────────────────────────────────┐
-      # │ DDL-AUTO OPTIONS:                                               │
-      # │ • none: Don't touch schema (production)                        │
-      # │ • validate: Validate schema matches entities (recommended)     │
-      # │ • update: Update schema (dangerous in production!)             │
-      # │ • create: Drop and recreate (only for testing!)               │
-      # │ • create-drop: Create on start, drop on stop                  │
-      # │                                                                 │
-      # │ We use 'validate' + Flyway for schema management              │
-      # └─────────────────────────────────────────────────────────────────┘
       ddl-auto: validate
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: identity
         format_sql: true
-    show-sql: true  # Set to false in production
-
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # FLYWAY CONFIGURATION
-  # ─────────────────────────────────────────────────────────────────────────
   flyway:
     enabled: true
+    schemas: identity
     locations: classpath:db/migration
-    baseline-on-migrate: true
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EUREKA CLIENT
-# ─────────────────────────────────────────────────────────────────────────────
+jwt:
+  secret: payflow-jwt-secret-key-change-in-production-minimum-256-bits-long-key-here
+  access-token-expiry: 900000
+  refresh-token-expiry: 604800000
+
 eureka:
   client:
     service-url:
@@ -661,31 +534,40 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# ─────────────────────────────────────────────────────────────────────────────
-# JWT CONFIGURATION
-# ─────────────────────────────────────────────────────────────────────────────
-jwt:
-  # ┌─────────────────────────────────────────────────────────────────────────┐
-  # │ SECRET KEY: Used to SIGN and VERIFY tokens                              │
-  # │ Must be at least 256 bits (32 characters) for HS256                     │
-  # └─────────────────────────────────────────────────────────────────────────┘
-  secret: your-256-bit-secret-key-for-jwt-token-signing-replace-in-production
-  
-  # Token expiration times (milliseconds)
-  access-token-expiry: 900000      # 15 minutes
-  refresh-token-expiry: 604800000  # 7 days
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+```
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ACTUATOR
-# ─────────────────────────────────────────────────────────────────────────────
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
+**Key Configuration Points:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    APPLICATION.YML EXPLAINED                                 │
+│                                                                              │
+│  DATABASE (Schema Isolation):                                               │
+│  ─────────────────────────────                                              │
+│  url: jdbc:postgresql://localhost:5432/payflow?currentSchema=identity       │
+│       │                           │              │                          │
+│       │                           │              └── Schema name           │
+│       │                           └── Single shared database               │
+│       └── PostgreSQL connection                                            │
+│                                                                              │
+│  JPA + FLYWAY:                                                              │
+│  ─────────────                                                              │
+│  • ddl-auto: validate      → Hibernate verifies entity matches schema      │
+│  • default_schema: identity→ Hibernate uses identity schema               │
+│  • flyway.schemas: identity→ Flyway manages identity schema               │
+│                                                                              │
+│  JWT:                                                                        │
+│  ────                                                                       │
+│  • secret: 256+ bit key for HMAC-SHA256 signing                            │
+│  • access-token-expiry: 15 minutes (in milliseconds)                       │
+│  • refresh-token-expiry: 7 days (in milliseconds)                          │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 
@@ -755,11 +637,11 @@ public class SecurityConfig {
      * Password encoder bean.
      * BCrypt is the recommended encoder for passwords.
      * 
-     * Strength 10 = 2^10 = 1024 iterations (good balance of security/speed)
+     * Strength 12 = 2^12 = 4096 iterations (~250ms per hash, secure)
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(10);
+        return new BCryptPasswordEncoder(12);
     }
 
 
@@ -769,7 +651,7 @@ public class SecurityConfig {
      * This configures how Spring Security handles incoming requests.
      */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // ┌─────────────────────────────────────────────────────────────┐
             // │ CSRF (Cross-Site Request Forgery) Protection               │
@@ -803,9 +685,19 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             
-            // All requests allowed (Gateway handles auth)
-            .authorizeHttpRequests(auth -> 
-                auth.anyRequest().permitAll()
+            // ┌─────────────────────────────────────────────────────────────┐
+            // │ ENDPOINT PERMISSIONS                                        │
+            // │                                                              │
+            // │ /v1/auth/** = Public (login, register)                     │
+            // │ /swagger-ui/** = Public (API docs)                         │
+            // │ /actuator/** = Public (health checks)                      │
+            // │ Everything else = Requires authentication                   │
+            // └─────────────────────────────────────────────────────────────┘
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/v1/auth/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
+                .anyRequest().authenticated()
             );
             
         return http.build();
@@ -816,21 +708,21 @@ public class SecurityConfig {
 
 ---
 
-### Step 4.8: Create Database for Identity Service
+### Step 4.8: Verify Database Schema Exists
+
+The `payflow` database should already exist from Sprint 00 setup. Flyway will automatically create the `identity` schema when the service starts.
 
 ```powershell
-# Connect to PostgreSQL and create database
-docker exec -it postgres psql -U payflow -d postgres
+# Verify payflow database exists
+docker exec -it postgres psql -U payflow -d payflow -c "SELECT 1"
+# Expected: 1
 
-# Inside psql shell:
-CREATE DATABASE payflow_identity;
-\q
+# After starting identity-service, verify identity schema was created
+docker exec -it postgres psql -U payflow -d payflow -c "\dn"
+# Expected: identity schema in the list
 ```
 
-Or using a single command:
-```powershell
-docker exec -it postgres psql -U payflow -d postgres -c "CREATE DATABASE payflow_identity;"
-```
+**Note:** PayFlow uses SCHEMA ISOLATION, not separate databases. All services share the `payflow` database but each has its own schema (identity, merchant, payment, settlement).
 
 ---
 
@@ -978,45 +870,69 @@ docker ps | findstr postgres
 # Start if not running
 docker compose -f docker-compose-infra.yml up -d postgres
 
-# Test connection
-docker exec -it postgres psql -U payflow -d payflow_identity -c "SELECT 1"
+# Test connection to payflow database
+docker exec -it postgres psql -U payflow -d payflow -c "SELECT 1"
 ```
 
-### Q3: "Database 'payflow_identity' does not exist"
+### Q3: "Schema 'identity' does not exist"
 
-**Cause:** Database not created yet.
+**Cause:** Flyway hasn't created the schema yet, or service hasn't started.
 
 **Fix:**
+Flyway automatically creates the schema on first startup. Just start the service:
 ```powershell
-docker exec -it postgres psql -U payflow -d postgres -c "CREATE DATABASE payflow_identity;"
+cd identity-service
+mvn spring-boot:run
+```
+
+To manually verify schema exists:
+```powershell
+docker exec -it postgres psql -U payflow -d payflow -c "\dn"
+# Should show 'identity' schema in the list
 ```
 
 
-### Q4: Why is Spring Security letting everything through?
+### Q4: Why is Spring Security configured with specific endpoint permissions?
 
-**This is intentional.** In microservices:
-1. API Gateway validates JWT tokens (already done in Part 03)
-2. Internal services trust requests that reach them
-3. Network security (private subnet) protects internal services
+Security configuration allows:
+- `/v1/auth/**` - Public (login/register endpoints)
+- `/swagger-ui/**`, `/v3/api-docs/**` - Public (API documentation)
+- `/actuator/**` - Public (health checks)
+- Everything else requires authentication
 
-If you need service-level security, add JWT validation here too.
+This provides defense-in-depth even though API Gateway also validates tokens.
 
-### Q5: Why separate databases per service?
+### Q5: Why schema isolation instead of separate databases?
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  DATABASE PER SERVICE PATTERN                                               │
+│  SCHEMA ISOLATION PATTERN (PayFlow uses this)                               │
 │                                                                              │
-│  Shared database:              Database per service:                        │
-│  ────────────────              ─────────────────────                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Single 'payflow' database with multiple schemas:                   │   │
+│  │                                                                      │   │
+│  │  payflow database                                                   │   │
+│  │    ├── identity schema   ← identity-service                        │   │
+│  │    │     └── users table                                           │   │
+│  │    ├── merchant schema   ← merchant-service                        │   │
+│  │    │     ├── merchants table                                       │   │
+│  │    │     └── api_keys table                                        │   │
+│  │    ├── payment schema    ← payment-service                         │   │
+│  │    │     └── transactions table                                    │   │
+│  │    └── settlement schema ← settlement-service                      │   │
+│  │          └── settlements table                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
-│  All services ─►  postgres     identity-service ─► payflow_identity        │
-│       │                        merchant-service ─► payflow_merchant        │
-│       └── Tight coupling       payment-service  ─► payflow_payment         │
-│       └── Schema conflicts                                                  │
-│       └── Single point of      • Loose coupling                            │
-│           failure              • Independent scaling                        │
-│                                • Team autonomy                              │
+│  BENEFITS OF SCHEMA ISOLATION:                                              │
+│  ────────────────────────────                                               │
+│  • Simpler backup/restore (single database)                                │
+│  • Easier cross-service queries when needed                                │
+│  • Lower operational complexity                                            │
+│  • Same logical separation as separate databases                           │
+│  • Each service only sees its own schema                                   │
+│                                                                              │
+│  URL format:                                                                │
+│  jdbc:postgresql://localhost:5432/payflow?currentSchema=identity           │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
