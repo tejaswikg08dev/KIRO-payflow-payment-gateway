@@ -372,10 +372,10 @@ POST /v1/merchants/mch_XyZ1234567/api-keys?keyType=LIVE
 
 ```powershell
 # Check merchants table
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT id, business_name, status FROM merchant.merchants;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT id, business_name, status FROM merchant.merchants;"
 
 # Check api_keys table
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT id, merchant_id, key_type, key_prefix, status FROM merchant.api_keys;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT id, merchant_id, key_type, key_prefix, status FROM merchant.api_keys;"
 ```
 
 **Expected Output:**
@@ -491,7 +491,7 @@ merchant-service/
 │    docker ps | grep postgres                                                │
 │                                                                              │
 │  □ merchant schema exists?                                                  │
-│    docker exec -it postgres psql -U payflow -d payflow -c "\dn"            │
+│    docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dn"            │
 │                                                                              │
 │  □ SpringDoc dependency in pom.xml?                                         │
 │    Check for springdoc-openapi-starter-webmvc-ui                           │

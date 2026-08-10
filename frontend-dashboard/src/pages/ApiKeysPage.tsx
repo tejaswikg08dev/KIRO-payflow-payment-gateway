@@ -38,16 +38,20 @@ function ApiKeysPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get merchant ID from token claims or profile
+        // Step 1: Get user profile (userId) from Identity Service
         const profileResponse = await api.get('/v1/auth/profile');
-        const merchId = profileResponse.data.data.merchantId;
+        const userId = profileResponse.data.data.userId;
+
+        // Step 2: Get merchant by userId from Merchant Service
+        const merchantResponse = await api.get(`/v1/merchants/by-user/${userId}`);
+        const merchId = merchantResponse.data.data.id;
         setMerchantId(merchId);
 
-        // Fetch API keys
+        // Step 3: Fetch API keys for this merchant
         const keysResponse = await api.get(`/v1/merchants/${merchId}/api-keys`);
         setApiKeys(keysResponse.data.data);
 
-        // Fetch webhook config
+        // Step 4: Fetch webhook config
         const webhookResponse = await api.get(`/v1/merchants/${merchId}/webhook`);
         setWebhookConfig(webhookResponse.data.data);
         setWebhookUrl(webhookResponse.data.data.webhookUrl || '');

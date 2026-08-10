@@ -209,7 +209,7 @@ cd identity-service
 mvn spring-boot:run
 
 # Check tables exist
-docker exec -it postgres psql -U payflow -d payflow -c "\dt identity.*"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dt identity.*"
 # Expected: users table
 ```
 

@@ -311,7 +311,7 @@ The merchant schema will be created automatically by Flyway. But if you want to 
 
 ```powershell
 # Connect to PostgreSQL and create schema
-docker exec -it postgres psql -U payflow -d payflow -c "CREATE SCHEMA IF NOT EXISTS merchant;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "CREATE SCHEMA IF NOT EXISTS merchant;"
 ```
 
 ---
@@ -408,7 +408,7 @@ docker-compose -f docker-compose-infra.yml up -d postgres
 
 **Fix:** Flyway will create it, or create manually:
 ```powershell
-docker exec -it postgres psql -U payflow -d payflow -c "CREATE SCHEMA merchant;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "CREATE SCHEMA merchant;"
 ```
 
 ---

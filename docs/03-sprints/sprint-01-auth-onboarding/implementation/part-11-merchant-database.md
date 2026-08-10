@@ -153,7 +153,7 @@ In this part, you'll create the **database layer** for the Merchant Service.
 
 ```powershell
 # Ensure PayFlow database exists with merchant schema
-docker exec -it postgres psql -U payflow -d payflow -c "\dn"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dn"
 # Should list schemas including: merchant
 
 # If merchant schema doesn't exist, Flyway will create it
@@ -461,13 +461,13 @@ mvn spring-boot:run
 
 Check migration applied:
 ```powershell
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT * FROM merchant.flyway_schema_history;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT * FROM merchant.flyway_schema_history;"
 ```
 
 ### 5.2 Verify Tables Created
 
 ```powershell
-docker exec -it postgres psql -U payflow -d payflow -c "\dt merchant.*"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dt merchant.*"
 ```
 
 Expected output:
@@ -559,7 +559,7 @@ spring:
 
 **Solution:** Reset Flyway history:
 ```powershell
-docker exec -it postgres psql -U payflow -d payflow -c "DROP SCHEMA merchant CASCADE;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "DROP SCHEMA merchant CASCADE;"
 ```
 Then restart the application.
 

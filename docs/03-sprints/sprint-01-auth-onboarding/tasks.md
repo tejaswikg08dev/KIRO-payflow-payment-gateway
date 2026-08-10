@@ -499,28 +499,53 @@ npm run dev
 
 ---
 
-## Part 15: Frontend Login Page
+## Part 15: Frontend Login & Registration Pages
 
 **File:** [implementation/part-15-frontend-login-page.md](./implementation/part-15-frontend-login-page.md)
 
 ### Tasks
 
-- [ ] Create LoginPage.tsx component
-- [ ] Create RegisterPage.tsx component
-- [ ] Create AuthLayout.tsx component
-- [ ] Implement login form with validation
-- [ ] Implement register form with validation
-- [ ] Store JWT token in localStorage
-- [ ] Handle login/register errors
-- [ ] Create ProtectedRoute component
-- [ ] Configure React Router
+- [x] Create LoginPage.tsx component
+- [x] Create RegisterPage.tsx component
+- [x] Create MerchantOnboardingPage.tsx component
+- [x] Implement login form with validation
+- [x] Implement register form with validation
+- [x] Implement merchant onboarding form
+- [x] Store JWT token in localStorage (key: `payflow_token`)
+- [x] Handle login/register errors with user-friendly messages
+- [x] Add navigation links between login and register
+- [x] Configure React Router routes
+- [x] Configure Vite proxy for API calls
+
+### Implemented Routes
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/login` | LoginPage | User login form |
+| `/register` | RegisterPage | User registration form |
+| `/onboarding` | MerchantOnboardingPage | Business setup for new merchants |
+
+### User Flow
+
+```
+/register → (creates user account) → /onboarding → (creates merchant) → /dashboard
+       ↑                                                                      │
+       └── /login ← (existing user) ─────────────────────────────────────────┘
+```
 
 ### Verification
 
 ```powershell
 # Start frontend
+cd frontend-dashboard
 npm run dev
-# Test: Register new user, Login, Verify redirect
+
+# Test the complete flow:
+# 1. Visit http://localhost:3000/register - Create new user
+# 2. After registration, auto-redirect to /onboarding
+# 3. Complete merchant setup (business name, type, etc.)
+# 4. Redirect to /dashboard
+# 5. Logout and visit /login - Login with existing user
 ```
 
 ---
@@ -764,11 +789,12 @@ git log --oneline -5
 - [ ] GET /v1/merchants/{id} returns merchant
 
 ### Frontend Working
-- [ ] Registration form submits successfully
-- [ ] Login redirects to dashboard
-- [ ] JWT stored in localStorage (key: payflow_token)
-- [ ] Protected routes redirect to login
-- [ ] Dashboard shows merchant info
+- [x] Registration form submits successfully
+- [x] Merchant onboarding form submits successfully
+- [x] Login redirects to dashboard
+- [x] JWT stored in localStorage (key: payflow_token)
+- [ ] Protected routes redirect to login (optional)
+- [x] Dashboard shows merchant info
 
 ### Docker & CI/CD
 - [ ] All Dockerfiles build successfully

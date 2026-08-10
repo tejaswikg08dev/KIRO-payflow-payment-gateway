@@ -25,6 +25,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('payflow_token');
+      localStorage.removeItem('payflow_refresh_token');
+      localStorage.removeItem('payflow_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

@@ -1,45 +1,39 @@
-# Sprint 1, Part 15: Frontend Login Page
+# Sprint 1, Part 15: Frontend Login, Register & Merchant Onboarding Pages
 
-**Duration:** 1-2 hours  
+**Duration:** 2-3 hours  
 **Prerequisites:** Part 14 completed, React project running
 
 ---
 
 ## 1. What We're Building
 
-In this part, you'll create the **login page** with form handling and API integration.
+In this part, you'll create the **complete authentication flow** with three pages:
+
+1. **RegisterPage** - New user registration
+2. **MerchantOnboardingPage** - Business setup after registration  
+3. **LoginPage** - Existing user sign-in
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     LOGIN PAGE COMPONENTS                                    │
+│                     COMPLETE AUTH FLOW                                       │
 │                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                                                                      │   │
-│  │                    ┌───────────────────────────┐                    │   │
-│  │                    │    PayFlow Dashboard      │                    │   │
-│  │                    │                           │                    │   │
-│  │                    │  ┌───────────────────┐   │                    │   │
-│  │                    │  │ Email             │   │                    │   │
-│  │                    │  └───────────────────┘   │                    │   │
-│  │                    │                           │                    │   │
-│  │                    │  ┌───────────────────┐   │                    │   │
-│  │                    │  │ Password          │   │                    │   │
-│  │                    │  └───────────────────┘   │                    │   │
-│  │                    │                           │                    │   │
-│  │                    │  ┌───────────────────┐   │                    │   │
-│  │                    │  │     Sign In       │   │                    │   │
-│  │                    │  └───────────────────┘   │                    │   │
-│  │                    │                           │                    │   │
-│  │                    └───────────────────────────┘                    │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────┐      ┌────────────────────┐      ┌─────────────────┐     │
+│  │              │      │                    │      │                 │     │
+│  │   Register   │ ───► │ Merchant Onboarding│ ───► │    Dashboard    │     │
+│  │    Page      │      │       Page         │      │      Page       │     │
+│  │              │      │                    │      │                 │     │
+│  └──────────────┘      └────────────────────┘      └─────────────────┘     │
+│         ▲                                                    │              │
+│         │                                                    │              │
+│         │            ┌──────────────┐                       │              │
+│         │            │              │                       │              │
+│         └─────────── │    Login     │ ◄─────────────────────┘              │
+│                      │    Page      │    (Existing User)                   │
+│                      │              │                                       │
+│                      └──────────────┘                                       │
 │                                                                              │
-│  Features:                                                                  │
-│  • Email and password form fields                                          │
-│  • Loading state during API call                                           │
-│  • Error message display                                                   │
-│  • Token storage in localStorage                                           │
-│  • Redirect to dashboard after login                                       │
+│  New User Flow:     /register → /onboarding → /dashboard                   │
+│  Existing User Flow: /login → /dashboard                                   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -48,40 +42,29 @@ In this part, you'll create the **login page** with form handling and API integr
 
 ## 2. Concepts Deep Dive
 
-### 2.1 Simple Authentication Flow
+### 2.1 Two-Step Onboarding Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    AUTHENTICATION FLOW                                       │
+│                    WHY TWO-STEP ONBOARDING?                                  │
 │                                                                              │
-│  1. User enters email and password                                          │
-│  2. Frontend calls POST /api/v1/auth/login                                  │
-│  3. Backend returns JWT token                                               │
-│  4. Frontend stores token in localStorage                                   │
-│  5. Subsequent API calls include token in header                            │
-│  6. User is redirected to dashboard                                         │
+│  Step 1: User Registration                                                  │
+│  ─────────────────────────                                                  │
+│  • Creates identity.users record                                            │
+│  • Returns JWT token with userId                                            │
+│  • Minimal info: email, password, name                                      │
 │                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │                    LOGIN FLOW DIAGRAM                              │    │
-│  │                                                                     │    │
-│  │  LoginPage                    Backend                               │    │
-│  │  ──────────                   ───────                               │    │
-│  │      │                           │                                  │    │
-│  │      │  POST /api/v1/auth/login  │                                  │    │
-│  │      │  { email, password }      │                                  │    │
-│  │      │ ──────────────────────►   │                                  │    │
-│  │      │                           │                                  │    │
-│  │      │  { success: true,         │                                  │    │
-│  │      │    data: { token: "..." }}│                                  │    │
-│  │      │ ◄──────────────────────   │                                  │    │
-│  │      │                           │                                  │    │
-│  │      │  Store token              │                                  │    │
-│  │      │  localStorage.setItem()   │                                  │    │
-│  │      │                           │                                  │    │
-│  │      │  navigate('/dashboard')   │                                  │    │
-│  │      ▼                           │                                  │    │
-│  │                                                                     │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
+│  Step 2: Merchant Onboarding                                                │
+│  ─────────────────────────────                                              │
+│  • Creates merchant.merchants record                                        │
+│  • Links to userId from Step 1                                              │
+│  • Business details: name, type, GST, website                               │
+│                                                                              │
+│  Benefits:                                                                   │
+│  • Separation of concerns (identity vs business)                            │
+│  • Can pause onboarding and resume later                                    │
+│  • Different services handle different data                                 │
+│  • Consistent with production payment gateways                              │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -90,23 +73,20 @@ In this part, you'll create the **login page** with form handling and API integr
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    TOKEN STORAGE COMPARISON                                  │
+│                    TOKEN STORAGE                                             │
 │                                                                              │
-│  Option         │ Pros                    │ Cons                            │
-│  ───────────────┼─────────────────────────┼────────────────────────────────│
-│  localStorage   │ Persists across tabs    │ Vulnerable to XSS              │
-│                 │ Simple API              │ Accessible by any JS            │
-│                 │ Persists on refresh     │                                 │
-│                 │                         │                                 │
-│  sessionStorage │ Cleared on tab close    │ Lost when tab closes           │
-│                 │ Per-tab isolation       │ Can't share across tabs         │
-│                 │                         │                                 │
-│  HTTP-only      │ Not accessible by JS    │ Need backend changes           │
-│  Cookie         │ Auto-sent with requests │ More complex setup              │
-│                 │ XSS protection          │                                 │
+│  Key: 'payflow_token'                                                       │
+│  Storage: localStorage                                                      │
 │                                                                              │
-│  Our approach: localStorage with key 'payflow_token'                        │
-│  Simple and effective for learning purposes.                                │
+│  Why localStorage?                                                          │
+│  • Persists across tabs and browser refresh                                 │
+│  • Simple API for read/write                                                │
+│  • Acceptable for development/learning                                      │
+│                                                                              │
+│  In production, consider:                                                   │
+│  • HTTP-only cookies (more secure against XSS)                              │
+│  • Refresh token rotation                                                   │
+│  • Token expiration handling                                                │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -116,22 +96,475 @@ In this part, you'll create the **login page** with form handling and API integr
 ## 3. Prerequisites
 
 ```powershell
-# Ensure dev server is running
+# Ensure frontend dev server is ready
 cd frontend-dashboard
-npm run dev
+npm install
+
+# Verify API service exists
+ls src/services/api.ts
 ```
 
 ---
 
 ## 4. Step-by-Step Implementation
 
-### Step 4.1: Create Login Page Component
+### Step 4.1: Create Register Page
+
+**File: `frontend-dashboard/src/pages/RegisterPage.tsx`**
+
+```tsx
+import { useState, FormEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import api from '../services/api';
+
+function RegisterPage() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    fullName: '',
+    phone: '',
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validateForm = (): string | null => {
+    if (formData.password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (formData.password !== formData.confirmPassword) {
+      return 'Passwords do not match';
+    }
+    if (!formData.email.includes('@')) {
+      return 'Please enter a valid email';
+    }
+    if (formData.fullName.trim().length < 2) {
+      return 'Please enter your full name';
+    }
+    return null;
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await api.post('/v1/auth/register', {
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName,
+        phone: formData.phone || null,
+        role: 'MERCHANT', // Default role for dashboard users
+      });
+
+      // Store token and user info
+      localStorage.setItem('payflow_token', response.data.data.accessToken);
+      localStorage.setItem('payflow_user', JSON.stringify(response.data.data.user));
+
+      // Navigate to merchant onboarding
+      navigate('/onboarding');
+    } catch (err: unknown) {
+      const errorResponse = err as { response?: { data?: { message?: string } } };
+      const message = errorResponse.response?.data?.message || 'Registration failed. Please try again.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
+        <h1 className="mb-2 text-center text-2xl font-bold text-gray-800">
+          Create Account
+        </h1>
+        <p className="mb-6 text-center text-sm text-gray-500">
+          Sign up to start accepting payments with PayFlow
+        </p>
+
+        {error && (
+          <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+              Full Name
+            </label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              required
+              value={formData.fullName}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="John Doe"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              value={formData.email}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="john@example.com"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+              Phone (Optional)
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="+91 9876543210"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              value={formData.password}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="••••••••"
+            />
+            <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded bg-blue-600 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-gray-500">
+          Already have an account?{' '}
+          <Link to="/login" className="text-blue-600 hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default RegisterPage;
+```
+
+---
+
+### Step 4.2: Create Merchant Onboarding Page
+
+**File: `frontend-dashboard/src/pages/MerchantOnboardingPage.tsx`**
+
+```tsx
+import { useState, FormEvent, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+
+interface UserInfo {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
+function MerchantOnboardingPage() {
+  const navigate = useNavigate();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [formData, setFormData] = useState({
+    businessName: '',
+    businessType: 'INDIVIDUAL',
+    websiteUrl: '',
+    gstNumber: '',
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('payflow_token');
+    if (!token) {
+      navigate('/register');
+      return;
+    }
+
+    // Get user info from profile endpoint
+    const fetchUserInfo = async () => {
+      try {
+        const response = await api.get('/v1/auth/profile');
+        setUserInfo(response.data.data);
+
+        // Check if user already has a merchant account
+        try {
+          const merchantResponse = await api.get(`/v1/merchants/by-user/${response.data.data.userId}`);
+          if (merchantResponse.data.data) {
+            // User already has merchant, go to dashboard
+            navigate('/dashboard');
+            return;
+          }
+        } catch {
+          // No merchant exists, continue with onboarding
+        }
+      } catch {
+        // Token invalid, redirect to login
+        localStorage.removeItem('payflow_token');
+        navigate('/login');
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, [navigate]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!userInfo) {
+      setError('User information not loaded');
+      return;
+    }
+
+    if (formData.businessName.trim().length < 2) {
+      setError('Please enter a valid business name');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await api.post('/v1/merchants', {
+        userId: userInfo.userId,
+        businessName: formData.businessName.trim(),
+        businessType: formData.businessType,
+        websiteUrl: formData.websiteUrl || null,
+        gstNumber: formData.gstNumber || null,
+      });
+
+      // Merchant created, go to dashboard
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      const errorResponse = err as { response?: { data?: { message?: string } } };
+      const message = errorResponse.response?.data?.message || 'Failed to create merchant. Please try again.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="w-full max-w-lg rounded-lg bg-white p-8 shadow-md">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">
+            Set Up Your Business
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Welcome, {userInfo?.fullName}! Let's set up your merchant account.
+          </p>
+        </div>
+
+        {/* Progress indicator */}
+        <div className="mb-6 flex items-center">
+          <div className="flex items-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm text-white">
+              ✓
+            </div>
+            <span className="ml-2 text-sm text-gray-600">Account Created</span>
+          </div>
+          <div className="mx-4 h-1 flex-1 bg-blue-500"></div>
+          <div className="flex items-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-sm text-white">
+              2
+            </div>
+            <span className="ml-2 text-sm font-medium text-gray-800">Business Setup</span>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="businessName" className="block text-sm font-medium text-gray-700">
+              Business Name *
+            </label>
+            <input
+              id="businessName"
+              name="businessName"
+              type="text"
+              required
+              value={formData.businessName}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Acme Electronics"
+            />
+            <p className="mt-1 text-xs text-gray-500">This will be displayed on payment pages</p>
+          </div>
+
+          <div>
+            <label htmlFor="businessType" className="block text-sm font-medium text-gray-700">
+              Business Type *
+            </label>
+            <select
+              id="businessType"
+              name="businessType"
+              value={formData.businessType}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="INDIVIDUAL">Individual / Sole Proprietor</option>
+              <option value="PARTNERSHIP">Partnership</option>
+              <option value="COMPANY">Private Limited Company</option>
+              <option value="LLP">Limited Liability Partnership (LLP)</option>
+              <option value="TRUST">Trust / NGO</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700">
+              Website URL (Optional)
+            </label>
+            <input
+              id="websiteUrl"
+              name="websiteUrl"
+              type="url"
+              value={formData.websiteUrl}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="https://www.yoursite.com"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="gstNumber" className="block text-sm font-medium text-gray-700">
+              GST Number (Optional)
+            </label>
+            <input
+              id="gstNumber"
+              name="gstNumber"
+              type="text"
+              value={formData.gstNumber}
+              onChange={handleChange}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="22AAAAA0000A1Z5"
+            />
+            <p className="mt-1 text-xs text-gray-500">15-character GST Identification Number</p>
+          </div>
+
+          <div className="rounded bg-blue-50 p-4">
+            <h3 className="text-sm font-medium text-blue-800">What happens next?</h3>
+            <ul className="mt-2 space-y-1 text-sm text-blue-700">
+              <li>• Your merchant account will be created</li>
+              <li>• You can generate API keys to integrate payments</li>
+              <li>• Start accepting test payments immediately</li>
+              <li>• Complete KYC verification to go live</li>
+            </ul>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded bg-blue-600 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? 'Creating Merchant Account...' : 'Complete Setup'}
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-xs text-gray-500">
+          By continuing, you agree to PayFlow's Terms of Service and Privacy Policy.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default MerchantOnboardingPage;
+```
+
+---
+
+### Step 4.3: Create Login Page
 
 **File: `frontend-dashboard/src/pages/LoginPage.tsx`**
 
 ```tsx
 import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
 function LoginPage() {
@@ -148,12 +581,13 @@ function LoginPage() {
 
     try {
       const response = await api.post('/v1/auth/login', { email, password });
-      localStorage.setItem('payflow_token', response.data.data.token);
+      localStorage.setItem('payflow_token', response.data.data.accessToken);
+      localStorage.setItem('payflow_user', JSON.stringify(response.data.data.user));
       navigate('/dashboard');
     } catch (err: unknown) {
       const message =
-        (err as { response?: { data?: { error?: { message?: string } } } })
-          .response?.data?.error?.message || 'Login failed. Please try again.';
+        (err as { response?: { data?: { message?: string } } })
+          .response?.data?.message || 'Login failed. Please try again.';
       setError(message);
     } finally {
       setLoading(false);
@@ -184,7 +618,7 @@ function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="admin@payflow.com"
             />
           </div>
@@ -199,7 +633,7 @@ function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="••••••••"
             />
           </div>
@@ -207,11 +641,18 @@ function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-primary py-2 font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+            className="w-full rounded bg-blue-600 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-gray-500">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-blue-600 hover:underline">
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );
@@ -220,102 +661,89 @@ function LoginPage() {
 export default LoginPage;
 ```
 
-**Code Breakdown:**
+---
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    LOGIN PAGE EXPLAINED                                      │
-│                                                                              │
-│  Imports:                                                                   │
-│  ────────                                                                   │
-│  useState, FormEvent    → React hooks and types                            │
-│  useNavigate            → React Router hook for navigation                 │
-│  api                    → Axios instance with interceptors                 │
-│                                                                              │
-│  State Variables:                                                           │
-│  ────────────────                                                           │
-│  email: string          → Email input value                                │
-│  password: string       → Password input value                             │
-│  error: string          → Error message to display                         │
-│  loading: boolean       → Submit button loading state                      │
-│                                                                              │
-│  handleSubmit Function:                                                     │
-│  ─────────────────────                                                      │
-│  1. e.preventDefault()         → Prevent form default submit               │
-│  2. setError('')               → Clear previous errors                     │
-│  3. setLoading(true)           → Show loading state                        │
-│  4. api.post('/v1/auth/login') → Call login API                            │
-│  5. localStorage.setItem()     → Store token as 'payflow_token'            │
-│  6. navigate('/dashboard')     → Redirect on success                       │
-│  7. catch → setError()         → Show error message                        │
-│  8. finally → setLoading(false)→ Reset loading state                       │
-│                                                                              │
-│  Token Storage:                                                             │
-│  ──────────────                                                             │
-│  localStorage.setItem('payflow_token', response.data.data.token);          │
-│  • Key: 'payflow_token'                                                    │
-│  • The api interceptor reads this key for Authorization header             │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### Step 4.4: Update App.tsx Routes
 
-### Step 4.2: Understanding the API Response
+**File: `frontend-dashboard/src/App.tsx`**
 
-The login endpoint returns this structure:
+```tsx
+import { Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import MerchantOnboardingPage from './pages/MerchantOnboardingPage';
+import DashboardPage from './pages/DashboardPage';
+import TransactionsPage from './pages/TransactionsPage';
+import ApiKeysPage from './pages/ApiKeysPage';
 
-```json
-{
-  "success": true,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "tokenType": "Bearer",
-    "user": {
-      "id": "usr_abc123",
-      "email": "admin@payflow.com",
-      "fullName": "Admin User",
-      "role": "MERCHANT"
-    }
-  }
+function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/onboarding" element={<MerchantOnboardingPage />} />
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/transactions" element={<TransactionsPage />} />
+      <Route path="/api-keys" element={<ApiKeysPage />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
 }
+
+export default App;
 ```
-
-We extract `response.data.data.token` and store it.
-
-### Step 4.3: How Authentication Works with API Interceptor
-
-Remember from Part 14, the api service has interceptors:
-
-```typescript
-// Request interceptor adds token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('payflow_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Response interceptor handles 401 errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('payflow_token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-```
-
-This means:
-1. After login, token is stored in localStorage
-2. Every subsequent API call automatically includes the token
-3. If token expires (401), user is redirected to login
 
 ---
 
-## 5. Verification
+### Step 4.5: Configure Vite Proxy
+
+**File: `frontend-dashboard/vite.config.ts`**
+
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+});
+```
+
+**Important:** The `rewrite` function removes the `/api` prefix because our backend endpoints are at `/v1/auth/...` not `/api/v1/auth/...`.
+
+---
+
+## 5. Backend Endpoints Required
+
+These endpoints must exist for the frontend to work:
+
+### Identity Service (Port 8081)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v1/auth/register` | Create new user account |
+| POST | `/v1/auth/login` | Authenticate and get JWT |
+| GET | `/v1/auth/profile` | Get user info from JWT |
+
+### Merchant Service (Port 8082)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v1/merchants` | Create merchant record |
+| GET | `/v1/merchants/by-user/{userId}` | Get merchant by user ID |
+
+---
+
+## 6. Verification
 
 ### Start the Development Server
 
@@ -324,147 +752,76 @@ cd frontend-dashboard
 npm run dev
 ```
 
-### Test Login Flow
+### Test Complete Flow
 
-1. Open `http://localhost:3000/login`
-2. You should see the login form
-3. Enter valid credentials
-4. Check browser DevTools:
-   - Network tab: See the POST request
-   - Application tab: See `payflow_token` in localStorage
-5. After successful login, you're redirected to `/dashboard`
+1. **Register New User:**
+   - Open `http://localhost:3000/register`
+   - Fill in all fields
+   - Click "Create Account"
+   - Should redirect to `/onboarding`
 
-### Test Error Handling
+2. **Complete Onboarding:**
+   - Enter business name and select type
+   - Click "Complete Setup"
+   - Should redirect to `/dashboard`
 
-1. Enter invalid credentials
-2. You should see error message displayed
-3. Form should be re-enabled after error
+3. **Test Login:**
+   - Logout (clear localStorage or click logout)
+   - Go to `/login`
+   - Enter registered credentials
+   - Should redirect to `/dashboard`
+
+4. **Verify Token Storage:**
+   - Open DevTools → Application → Local Storage
+   - Check `payflow_token` exists
+   - Check `payflow_user` has user data
 
 ---
 
-## 6. File Structure
-
-After this part, your pages folder should have:
+## 7. File Structure
 
 ```
 frontend-dashboard/src/
 ├── pages/
-│   ├── LoginPage.tsx        ← Created this part
-│   ├── DashboardPage.tsx    ← Next part
-│   └── TransactionsPage.tsx
+│   ├── LoginPage.tsx            ← Sign in existing users
+│   ├── RegisterPage.tsx         ← Create new users
+│   ├── MerchantOnboardingPage.tsx ← Business setup
+│   ├── DashboardPage.tsx        ← Main dashboard
+│   ├── TransactionsPage.tsx     ← Transaction list
+│   └── ApiKeysPage.tsx          ← API key management
 ├── services/
-│   └── api.ts
-├── App.tsx
-├── main.tsx
-└── index.css
+│   └── api.ts                   ← Axios instance with interceptors
+├── App.tsx                      ← Route configuration
+├── main.tsx                     ← React entry point
+└── index.css                    ← Tailwind CSS
 ```
 
 ---
 
-## 7. Key Takeaways
+## 8. Key Takeaways
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    WHAT YOU LEARNED                                          │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Concept               │  Implementation                            │   │
-│  ├────────────────────────┼────────────────────────────────────────────┤   │
-│  │  Form State            │  useState for each field (email, password)│   │
-│  │  Form Submission       │  async handleSubmit with e.preventDefault │   │
-│  │  Error Handling        │  try/catch with setError()                │   │
-│  │  Loading State         │  setLoading(true/false) + disabled button │   │
-│  │  Token Storage         │  localStorage.setItem('payflow_token')    │   │
-│  │  Navigation            │  useNavigate() from react-router-dom      │   │
-│  │  API Integration       │  Axios instance with interceptors         │   │
-│  └────────────────────────┴────────────────────────────────────────────┘   │
-│                                                                              │
-│  Key Pattern: The api interceptor automatically adds token to requests     │
-│  and handles 401 errors - you don't need to do it in every component!      │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-| Concept | What to Remember |
-|---------|------------------|
-| **Token Key** | Always use `'payflow_token'` - matches api interceptor |
-| **API Response** | Access token at `response.data.data.token` |
-| **Error Message** | Extract from `error.response?.data?.error?.message` |
-| **Loading State** | Disable button and show "Signing in..." text |
-| **Navigation** | Use `navigate('/dashboard')` after successful login |
+| Concept | Implementation |
+|---------|----------------|
+| **Form State** | useState with object for multiple fields |
+| **Form Validation** | validateForm() returns error string or null |
+| **Error Handling** | try/catch with setError() |
+| **Loading State** | Disable button + show loading text |
+| **Token Storage** | `localStorage.setItem('payflow_token', ...)` |
+| **Navigation** | `useNavigate()` from react-router-dom |
+| **Auth Check** | useEffect to verify token on page load |
+| **Conditional Rendering** | checkingAuth state for loading |
 
 ---
 
-## 8. Common Issues and Solutions
+## 9. Common Issues and Solutions
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    TROUBLESHOOTING GUIDE                                     │
-│                                                                              │
-│  Issue 1: "Login fails but no error shown"                                 │
-│  ───────────────────────────────────────────                                │
-│  Cause:   Backend might not be running                                      │
-│  Fix:     Check backend services are running at http://localhost:8080      │
-│           Use browser DevTools → Network tab to see actual error           │
-│                                                                              │
-│  Issue 2: "Token not being sent in subsequent requests"                    │
-│  ─────────────────────────────────────────────────────                      │
-│  Cause:   Token key mismatch or interceptor issue                          │
-│  Fix:     Verify localStorage key is exactly 'payflow_token'               │
-│           Check api.ts interceptor is configured correctly                 │
-│                                                                              │
-│  Issue 3: "Redirect to login after successful login"                       │
-│  ───────────────────────────────────────────────────                        │
-│  Cause:   Token not stored before navigate, or dashboard making            │
-│           API call before token is saved                                    │
-│  Fix:     Ensure localStorage.setItem runs BEFORE navigate()               │
-│                                                                              │
-│  Issue 4: "CORS error when calling API"                                    │
-│  ─────────────────────────────────────                                      │
-│  Cause:   Vite proxy not configured correctly                              │
-│  Fix:     Check vite.config.ts has proxy for '/api' to backend             │
-│                                                                              │
-│  Issue 5: "Form submits but page reloads"                                  │
-│  ─────────────────────────────────────────                                  │
-│  Cause:   Missing e.preventDefault() in handleSubmit                       │
-│  Fix:     Ensure handleSubmit starts with e.preventDefault()               │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 9. Related Concepts
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    RELATED TOPICS FOR DEEPER LEARNING                        │
-│                                                                              │
-│  React Concepts Used:                                                       │
-│  ─────────────────────                                                      │
-│  • useState Hook       → Managing form field values and UI state           │
-│  • FormEvent Type      → TypeScript type for form submission events        │
-│  • Controlled Inputs   → Input values controlled by React state            │
-│                                                                              │
-│  Authentication Patterns:                                                   │
-│  ────────────────────────                                                   │
-│  • JWT (JSON Web Token)  → Stateless authentication token                  │
-│  • Bearer Token          → Authorization header format                     │
-│  • Token Expiry          → Handled by api interceptor (401 → /login)       │
-│                                                                              │
-│  React Router:                                                              │
-│  ─────────────                                                              │
-│  • useNavigate           → Programmatic navigation                         │
-│  • Route components      → Defined in App.tsx                              │
-│  • No ProtectedRoute     → We rely on api interceptor for auth checks      │
-│                                                                              │
-│  Axios Interceptors:                                                        │
-│  ───────────────────                                                        │
-│  • Request interceptor   → Adds token to every request                     │
-│  • Response interceptor  → Handles 401 globally (redirect to login)        │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "Network Error" | Backend not running | Start identity-service and merchant-service |
+| "401 Unauthorized" | Token expired/invalid | Clear localStorage, re-register |
+| Redirect loop | Missing merchant check | Verify /v1/merchants/by-user endpoint |
+| Form doesn't submit | Missing e.preventDefault() | Add to handleSubmit |
+| Styles not working | Tailwind not configured | Check tailwind.config.js |
 
 ---
 
@@ -472,9 +829,8 @@ frontend-dashboard/src/
 
 In the next part, you'll build the **Dashboard Page** that:
 - Displays merchant statistics
-- Shows total payments, success rate, and revenue
-- Has navigation to transactions page
-- Includes a logout button
+- Shows navigation sidebar
+- Includes logout functionality
 
 **Continue to:** [part-16-frontend-dashboard-page.md](./part-16-frontend-dashboard-page.md)
 

@@ -186,7 +186,7 @@ In this part, you'll create the **database layer** for the Identity Service - en
 
 ```powershell
 # PostgreSQL running with identity schema created
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT 1 FROM identity.users LIMIT 0"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT 1 FROM identity.users LIMIT 0"
 # If schema doesn't exist yet, that's OK - Flyway will create it
 
 # Identity Service builds successfully
@@ -661,7 +661,7 @@ INFO  --- Started IdentityServiceApplication in X.XXX seconds
 
 ```powershell
 # Check tables exist
-docker exec -it postgres psql -U payflow -d payflow -c "\dt identity.*"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dt identity.*"
 
 # Expected output:
 #              List of relations
@@ -671,7 +671,7 @@ docker exec -it postgres psql -U payflow -d payflow -c "\dt identity.*"
 #  identity | users                | table | payflow
 
 # Check users table structure
-docker exec -it postgres psql -U payflow -d payflow -c "\d identity.users"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\d identity.users"
 ```
 
 ---
@@ -774,8 +774,8 @@ identity-service/
 **Fix:**
 ```powershell
 # Option 1: Reset database (dev only!)
-docker exec -it postgres psql -U payflow -c "DROP SCHEMA identity CASCADE;"
-docker exec -it postgres psql -U payflow -c "CREATE SCHEMA identity;"
+docker exec -it payflow-postgres psql -U payflow -c "DROP SCHEMA identity CASCADE;"
+docker exec -it payflow-postgres psql -U payflow -c "CREATE SCHEMA identity;"
 
 # Option 2: Repair Flyway (use if you really need to keep data)
 mvn flyway:repair -Dflyway.url=jdbc:postgresql://localhost:5432/payflow \

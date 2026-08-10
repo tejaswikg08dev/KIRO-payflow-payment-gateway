@@ -1,10 +1,14 @@
 package com.payflow.identity.controller;
 
 import com.payflow.common.dto.ApiResponse;
+import com.payflow.common.exception.PayflowException;
 import com.payflow.identity.dto.AuthResponse;
 import com.payflow.identity.dto.LoginRequest;
+import com.payflow.identity.dto.ProfileResponse;
 import com.payflow.identity.dto.RegisterRequest;
 import com.payflow.identity.service.AuthService;
+import com.payflow.identity.service.JwtService;
+import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new user account and returns JWT tokens")
@@ -43,5 +48,40 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/profile")
+    @Operation(summary = "Get user profile from JWT token", description = "Returns user info extracted from the Authorization header token")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<ProfileResponse>> getProfile(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        
+        // Extract token from header
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new PayflowException("INVALID_TOKEN", "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
+        }
+        
+        String token = authHeader.substring(7);
+        Claims claims = jwtService.validateToken(token);
+        
+        if (claims == null) {
+            throw new PayflowException("INVALID_TOKEN", "Token is invalid or expired", HttpStatus.UNAUTHORIZED);
+        }
+        
+        // Extract claims
+        String userId = claims.get("userId", String.class);
+        String email = claims.get("email", String.class);
+        String role = claims.get("role", String.class);
+        
+        ProfileResponse profile = ProfileResponse.builder()
+                .userId(userId)
+                .email(email)
+                .role(role)
+                .build();
+        
+        return ResponseEntity.ok(ApiResponse.success(profile));
     }
 }

@@ -254,7 +254,7 @@ docker ps | findstr postgres
 # Expected: postgres container running
 
 # Check PostgreSQL connection and identity schema exists
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT 1"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT 1"
 # Expected: 1
 ```
 
@@ -714,11 +714,11 @@ The `payflow` database should already exist from Sprint 00 setup. Flyway will au
 
 ```powershell
 # Verify payflow database exists
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT 1"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT 1"
 # Expected: 1
 
 # After starting identity-service, verify identity schema was created
-docker exec -it postgres psql -U payflow -d payflow -c "\dn"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dn"
 # Expected: identity schema in the list
 ```
 
@@ -871,7 +871,7 @@ docker ps | findstr postgres
 docker compose -f docker-compose-infra.yml up -d postgres
 
 # Test connection to payflow database
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT 1"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT 1"
 ```
 
 ### Q3: "Schema 'identity' does not exist"
@@ -887,7 +887,7 @@ mvn spring-boot:run
 
 To manually verify schema exists:
 ```powershell
-docker exec -it postgres psql -U payflow -d payflow -c "\dn"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dn"
 # Should show 'identity' schema in the list
 ```
 

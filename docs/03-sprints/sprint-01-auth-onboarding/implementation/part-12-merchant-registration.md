@@ -173,7 +173,7 @@ In this part, you'll implement the **merchant registration flow** with API key g
 
 ```powershell
 # Ensure merchant database is ready
-docker exec -it postgres psql -U payflow -d payflow -c "\dt merchant.*"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dt merchant.*"
 # Should show: merchants, api_keys tables
 
 # Ensure Merchant Service compiles
@@ -937,8 +937,8 @@ Expected Response (201 Created):
 ### 5.4 Verify Database
 
 ```powershell
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT id, business_name, status FROM merchant.merchants;"
-docker exec -it postgres psql -U payflow -d payflow -c "SELECT id, merchant_id, key_type, key_prefix FROM merchant.api_keys;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT id, business_name, status FROM merchant.merchants;"
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "SELECT id, merchant_id, key_type, key_prefix FROM merchant.api_keys;"
 ```
 
 ---
@@ -1029,10 +1029,10 @@ merchant-service/
 │    docker ps | grep postgres                                                │
 │                                                                              │
 │  □ merchant schema exists?                                                  │
-│    docker exec -it postgres psql -U payflow -d payflow -c "\dn"            │
+│    docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dn"            │
 │                                                                              │
 │  □ Tables created?                                                          │
-│    docker exec -it postgres psql -U payflow -d payflow -c "\dt merchant.*" │
+│    docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dt merchant.*" │
 │                                                                              │
 │  □ Service started without errors?                                          │
 │    Check console for Spring Boot startup messages                          │

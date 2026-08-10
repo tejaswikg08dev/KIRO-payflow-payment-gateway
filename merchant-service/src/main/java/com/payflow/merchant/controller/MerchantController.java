@@ -36,6 +36,13 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(merchant));
     }
 
+    @GetMapping("/by-user/{userId}")
+    @Operation(summary = "Get merchant by user ID", description = "Find merchant associated with a user account")
+    public ResponseEntity<ApiResponse<Merchant>> getMerchantByUserId(@PathVariable String userId) {
+        Merchant merchant = merchantService.getMerchantByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success(merchant));
+    }
+
     // ==================== API KEY ENDPOINTS ====================
 
     @PostMapping("/{merchantId}/api-keys")
