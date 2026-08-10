@@ -712,6 +712,13 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(merchant));
     }
 
+    @GetMapping("/by-user/{userId}")
+    @Operation(summary = "Get merchant by user ID", description = "Find merchant associated with a user account")
+    public ResponseEntity<ApiResponse<Merchant>> getMerchantByUserId(@PathVariable String userId) {
+        Merchant merchant = merchantService.getMerchantByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success(merchant));
+    }
+
     @PostMapping("/{merchantId}/api-keys")
     @Operation(summary = "Generate API key pair (public + secret)")
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateApiKey(
@@ -793,6 +800,29 @@ public class MerchantController {
 │                                                                              │
 │  Response (404 Not Found):                                                  │
 │  { "success": false, "message": "Merchant not found with id: ..." }        │
+│                                                                              │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                              │
+│  Endpoint 3: GET /v1/merchants/by-user/{userId}                             │
+│  ───────────────────────────────────────────────                            │
+│  @GetMapping("/by-user/{userId}")                                           │
+│  @Operation(summary = "Get merchant by user ID")                            │
+│                                                                              │
+│  Purpose: Frontend uses this to find merchant after login/registration     │
+│  Input:  @PathVariable String userId                                        │
+│  Output: ResponseEntity<ApiResponse<Merchant>>                              │
+│                                                                              │
+│  Flow:                                                                       │
+│  1. User logs in → gets JWT with userId                                     │
+│  2. Frontend calls GET /v1/auth/profile → gets userId                      │
+│  3. Frontend calls GET /v1/merchants/by-user/{userId}                      │
+│  4. Frontend now has merchantId for API key operations                     │
+│                                                                              │
+│  Response (200 OK):                                                         │
+│  { "success": true, "data": { merchant object } }                          │
+│                                                                              │
+│  Response (404 Not Found):                                                  │
+│  { "success": false, "message": "Merchant not found for user: ..." }       │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

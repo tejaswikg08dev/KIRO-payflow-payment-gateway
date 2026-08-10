@@ -186,10 +186,14 @@ mvn clean compile
 package com.payflow.identity.controller;
 
 import com.payflow.common.dto.ApiResponse;
+import com.payflow.common.exception.PayflowException;
 import com.payflow.identity.dto.AuthResponse;
 import com.payflow.identity.dto.LoginRequest;
+import com.payflow.identity.dto.ProfileResponse;
 import com.payflow.identity.dto.RegisterRequest;
 import com.payflow.identity.service.AuthService;
+import com.payflow.identity.service.JwtService;
+import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -206,6 +210,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new user account and returns JWT tokens")
@@ -228,6 +233,41 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/profile")
+    @Operation(summary = "Get user profile from JWT token", description = "Returns user info extracted from the Authorization header token")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<ProfileResponse>> getProfile(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        
+        // Extract token from header
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new PayflowException("INVALID_TOKEN", "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
+        }
+        
+        String token = authHeader.substring(7);
+        Claims claims = jwtService.validateToken(token);
+        
+        if (claims == null) {
+            throw new PayflowException("INVALID_TOKEN", "Token is invalid or expired", HttpStatus.UNAUTHORIZED);
+        }
+        
+        // Extract claims
+        String userId = claims.get("userId", String.class);
+        String email = claims.get("email", String.class);
+        String role = claims.get("role", String.class);
+        
+        ProfileResponse profile = ProfileResponse.builder()
+                .userId(userId)
+                .email(email)
+                .role(role)
+                .build();
+        
+        return ResponseEntity.ok(ApiResponse.success(profile));
     }
 }
 ```
@@ -275,8 +315,64 @@ public class AuthController {
 
 ---
 
+### Step 4.2: Create ProfileResponse DTO
 
-### Step 4.2: Understanding Common-Lib Integration
+**File: `identity-service/src/main/java/com/payflow/identity/dto/ProfileResponse.java`**
+
+```java
+package com.payflow.identity.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * Response DTO for GET /v1/auth/profile endpoint.
+ * Returns user info extracted from JWT token.
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProfileResponse {
+    private String userId;
+    private String email;
+    private String role;
+    private String merchantId;  // Will be populated by frontend after calling Merchant Service
+}
+```
+
+**Why ProfileResponse?**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PROFILE ENDPOINT PURPOSE                                  │
+│                                                                              │
+│  The frontend needs the userId to:                                          │
+│  • Fetch merchant data: GET /v1/merchants/by-user/{userId}                 │
+│  • Create merchant during onboarding: POST /v1/merchants                   │
+│                                                                              │
+│  Flow:                                                                       │
+│  ──────                                                                      │
+│  1. Frontend has JWT token (stored after login)                             │
+│  2. Frontend calls GET /v1/auth/profile with Bearer token                  │
+│  3. Backend extracts claims from JWT and returns user info                  │
+│  4. Frontend uses userId to interact with merchant service                  │
+│                                                                              │
+│  Why not decode JWT on frontend?                                            │
+│  ───────────────────────────────                                            │
+│  • JWT validation requires the secret key                                   │
+│  • Secret key must NEVER be exposed to frontend                             │
+│  • Server-side validation is more secure                                    │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+
+### Step 4.3: Understanding Common-Lib Integration
 
 The AuthController uses several classes from `common-lib`:
 
@@ -429,6 +525,7 @@ identity-service/
 │   │   └── AuthController.java     ← NEW: REST endpoints
 │   ├── dto/
 │   │   ├── AuthResponse.java       (with nested UserInfo)
+│   │   ├── ProfileResponse.java    ← NEW: Profile endpoint response
 │   │   ├── LoginRequest.java
 │   │   └── RegisterRequest.java
 │   ├── model/

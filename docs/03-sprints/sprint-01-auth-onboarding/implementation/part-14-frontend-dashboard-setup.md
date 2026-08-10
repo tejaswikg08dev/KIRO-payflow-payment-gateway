@@ -100,9 +100,11 @@ In this part, you'll create the **React frontend** for the PayFlow Merchant Dash
 │  │  │   Browser   │ ──────► │ Vite Dev    │ ──────► │ API Gateway │  │    │
 │  │  │ :3000       │         │ Server      │         │ :8080       │  │    │
 │  │  └─────────────┘         └─────────────┘         └─────────────┘  │    │
+│  │                              (rewrites)                            │    │
 │  │                                                                     │    │
-│  │  Browser sees:      /api/v1/merchants                              │    │
-│  │  Backend receives:  http://localhost:8080/api/v1/merchants         │    │
+│  │  Browser calls:     /api/v1/merchants                              │    │
+│  │  Vite rewrites to:  /v1/merchants                                  │    │
+│  │  Backend receives:  http://localhost:8080/v1/merchants             │    │
 │  │                                                                     │    │
 │  └────────────────────────────────────────────────────────────────────┘    │
 │                                                                              │
@@ -114,6 +116,8 @@ In this part, you'll create the **React frontend** for the PayFlow Merchant Dash
 │      '/api': {                                                              │
 │        target: 'http://localhost:8080',                                     │
 │        changeOrigin: true,                                                  │
+│        rewrite: (path) => path.replace(/^\/api/, ''),                       │
+│        secure: false,                                                       │
 │      },                                                                     │
 │    },                                                                       │
 │  }                                                                          │
@@ -256,6 +260,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        secure: false,
       },
     },
   },
@@ -282,10 +288,22 @@ export default defineConfig({
 │  • Proxies /api/* requests to backend                                      │
 │  • target: API Gateway on port 8080                                        │
 │  • changeOrigin: true (important for cookies/CORS)                         │
+│  • rewrite: strips /api prefix before forwarding                           │
+│  • secure: false (allows localhost without SSL)                            │
 │                                                                              │
 │  Example:                                                                   │
 │  • Frontend calls: /api/v1/auth/login                                      │
-│  • Vite proxies to: http://localhost:8080/api/v1/auth/login               │
+│  • Vite rewrites to: /v1/auth/login                                        │
+│  • Then proxies to: http://localhost:8080/v1/auth/login                    │
+│                                                                              │
+│  Why rewrite?                                                               │
+│  ────────────                                                               │
+│  • API Gateway routes don't include /api prefix                            │
+│  • Frontend uses /api prefix for Vite to identify proxy requests           │
+│  • rewrite removes it before forwarding to backend                         │
+│                                                                              │
+│  IMPORTANT: With Vite proxy, CORS configuration on backend is NOT          │
+│  required for development - all requests appear same-origin!               │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -472,15 +490,21 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 ```tsx
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import MerchantOnboardingPage from './pages/MerchantOnboardingPage';
 import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
+import ApiKeysPage from './pages/ApiKeysPage';
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/onboarding" element={<MerchantOnboardingPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/transactions" element={<TransactionsPage />} />
+      <Route path="/api-keys" element={<ApiKeysPage />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
@@ -504,6 +528,16 @@ export default App;
 │  ─────────────────────────────────────────────                              │
 │  • When URL is /login, render LoginPage component                          │
 │                                                                              │
+│  <Route path="/register" element={<RegisterPage />} />                      │
+│  ─────────────────────────────────────────────────                          │
+│  • When URL is /register, render RegisterPage                              │
+│  • New user account creation                                               │
+│                                                                              │
+│  <Route path="/onboarding" element={<MerchantOnboardingPage />} />          │
+│  ─────────────────────────────────────────────────────────────              │
+│  • When URL is /onboarding, render MerchantOnboardingPage                  │
+│  • Business setup after registration                                       │
+│                                                                              │
 │  <Route path="/dashboard" element={<DashboardPage />} />                    │
 │  ───────────────────────────────────────────────────                        │
 │  • When URL is /dashboard, render DashboardPage                            │
@@ -511,6 +545,11 @@ export default App;
 │  <Route path="/transactions" element={<TransactionsPage />} />              │
 │  ─────────────────────────────────────────────────────────                  │
 │  • When URL is /transactions, render TransactionsPage                      │
+│                                                                              │
+│  <Route path="/api-keys" element={<ApiKeysPage />} />                       │
+│  ─────────────────────────────────────────────────                          │
+│  • When URL is /api-keys, render ApiKeysPage                               │
+│  • API key management                                                      │
 │                                                                              │
 │  <Route path="*" element={<Navigate to="/login" replace />} />              │
 │  ─────────────────────────────────────────────────────────                  │
@@ -522,8 +561,11 @@ export default App;
 │  ──────────────                                                             │
 │  /              → Redirects to /login                                      │
 │  /login         → LoginPage                                                │
+│  /register      → RegisterPage (new user signup)                           │
+│  /onboarding    → MerchantOnboardingPage (business setup)                  │
 │  /dashboard     → DashboardPage                                            │
 │  /transactions  → TransactionsPage                                         │
+│  /api-keys      → ApiKeysPage                                              │
 │  /anything-else → Redirects to /login                                      │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -561,6 +603,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('payflow_token');
+      localStorage.removeItem('payflow_refresh_token');
+      localStorage.removeItem('payflow_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -581,7 +625,7 @@ export default api;
 │  • Creates reusable axios instance                                         │
 │  • All requests prepend /api                                               │
 │  • api.get('/v1/auth') → GET /api/v1/auth                                  │
-│  • Vite proxy then sends to localhost:8080                                 │
+│  • Vite proxy then strips /api and sends to localhost:8080                 │
 │                                                                              │
 │  Request Interceptor:                                                       │
 │  ────────────────────                                                       │
@@ -594,13 +638,18 @@ export default api;
 │  ─────────────────────                                                      │
 │  • Runs AFTER every response                                               │
 │  • On 401 Unauthorized:                                                    │
-│    1. Removes invalid token from localStorage                              │
+│    1. Removes all auth data from localStorage                              │
+│       - payflow_token (access token)                                       │
+│       - payflow_refresh_token (refresh token)                              │
+│       - payflow_user (user info)                                           │
 │    2. Redirects to /login                                                  │
 │  • Handles auth expiration globally                                        │
 │                                                                              │
 │  Token Storage:                                                             │
 │  ──────────────                                                             │
-│  • Key: 'payflow_token'                                                    │
+│  • 'payflow_token' - Access JWT token                                      │
+│  • 'payflow_refresh_token' - Refresh JWT token                             │
+│  • 'payflow_user' - User info JSON                                         │
 │  • Stored in localStorage (persists across browser sessions)               │
 │  • Set after successful login                                              │
 │  • Removed on logout or 401                                                │
@@ -671,14 +720,17 @@ frontend-dashboard/
 ├── node_modules/
 ├── src/
 │   ├── pages/
-│   │   ├── LoginPage.tsx       ← Created in Part 15
-│   │   ├── DashboardPage.tsx   ← Created in Part 16
-│   │   └── TransactionsPage.tsx
+│   │   ├── LoginPage.tsx          ← Created in Part 15
+│   │   ├── RegisterPage.tsx       ← Created in Part 15
+│   │   ├── MerchantOnboardingPage.tsx ← Created in Part 15
+│   │   ├── DashboardPage.tsx      ← Created in Part 16
+│   │   ├── TransactionsPage.tsx
+│   │   └── ApiKeysPage.tsx
 │   ├── services/
-│   │   └── api.ts              ← API client with interceptors
-│   ├── App.tsx                 ← Routing configuration
-│   ├── main.tsx                ← Entry point
-│   └── index.css               ← Tailwind styles
+│   │   └── api.ts                 ← API client with interceptors
+│   ├── App.tsx                    ← Routing configuration
+│   ├── main.tsx                   ← Entry point
+│   └── index.css                  ← Tailwind styles
 ├── index.html
 ├── package.json
 ├── postcss.config.js
@@ -699,8 +751,11 @@ frontend-dashboard/
 │  1. Vite Configuration                                                      │
 │  ─────────────────────                                                      │
 │  • Port 3000 for development                                               │
-│  • Proxy /api to backend on 8080                                           │
+│  • Proxy /api to backend on 8080 with path rewrite                         │
+│  • rewrite: strips /api prefix before forwarding                           │
+│  • secure: false for localhost development                                 │
 │  • Fast HMR and ES module support                                          │
+│  • With Vite proxy, CORS is NOT needed for development                     │
 │                                                                              │
 │  2. Tailwind Setup                                                          │
 │  ────────────────                                                           │
@@ -714,12 +769,21 @@ frontend-dashboard/
 │  • Routes + Route define paths                                             │
 │  • Navigate for redirects                                                  │
 │  • path="*" catches undefined routes                                       │
+│  • User flow: /register → /onboarding → /dashboard                         │
 │                                                                              │
 │  4. Axios Interceptors                                                      │
 │  ─────────────────────                                                      │
 │  • Request: adds auth token automatically                                  │
-│  • Response: handles 401 globally                                          │
-│  • Token stored in localStorage as 'payflow_token'                         │
+│  • Response: handles 401 globally, clears all auth data                    │
+│  • Token stored in localStorage:                                           │
+│    - 'payflow_token' (access JWT)                                          │
+│    - 'payflow_refresh_token' (refresh JWT)                                 │
+│    - 'payflow_user' (user info JSON)                                       │
+│                                                                              │
+│  5. Token Storage in Browser                                                │
+│  ───────────────────────────                                                │
+│  • View in DevTools: F12 → Application → Local Storage → localhost:3000    │
+│  • Keys: payflow_token, payflow_refresh_token, payflow_user                │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
