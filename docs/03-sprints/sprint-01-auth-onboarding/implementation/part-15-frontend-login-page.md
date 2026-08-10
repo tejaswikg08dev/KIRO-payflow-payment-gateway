@@ -113,7 +113,7 @@ ls src/services/api.ts
 **File: `frontend-dashboard/src/pages/RegisterPage.tsx`**
 
 ```tsx
-import { useState, FormEvent } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
@@ -150,7 +150,7 @@ function RegisterPage() {
     return null;
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
@@ -168,12 +168,15 @@ function RegisterPage() {
         password: formData.password,
         fullName: formData.fullName,
         phone: formData.phone || null,
-        role: 'MERCHANT', // Default role for dashboard users
+        role: 'MERCHANT',
       });
 
-      // Store token and user info
-      localStorage.setItem('payflow_token', response.data.data.accessToken);
-      localStorage.setItem('payflow_user', JSON.stringify(response.data.data.user));
+      const { accessToken, refreshToken, user } = response.data.data;
+
+      // Store both tokens
+      localStorage.setItem('payflow_token', accessToken);
+      localStorage.setItem('payflow_refresh_token', refreshToken);
+      localStorage.setItem('payflow_user', JSON.stringify(user));
 
       // Navigate to merchant onboarding
       navigate('/onboarding');
@@ -313,7 +316,7 @@ export default RegisterPage;
 **File: `frontend-dashboard/src/pages/MerchantOnboardingPage.tsx`**
 
 ```tsx
-import { useState, FormEvent, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
@@ -379,7 +382,7 @@ function MerchantOnboardingPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
@@ -563,7 +566,7 @@ export default MerchantOnboardingPage;
 **File: `frontend-dashboard/src/pages/LoginPage.tsx`**
 
 ```tsx
-import { useState, FormEvent } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
@@ -574,15 +577,20 @@ function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
       const response = await api.post('/v1/auth/login', { email, password });
-      localStorage.setItem('payflow_token', response.data.data.accessToken);
-      localStorage.setItem('payflow_user', JSON.stringify(response.data.data.user));
+      const { accessToken, refreshToken, user } = response.data.data;
+      
+      // Store both tokens
+      localStorage.setItem('payflow_token', accessToken);
+      localStorage.setItem('payflow_refresh_token', refreshToken);
+      localStorage.setItem('payflow_user', JSON.stringify(user));
+      
       navigate('/dashboard');
     } catch (err: unknown) {
       const message =
@@ -712,13 +720,14 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+        secure: false,
       },
     },
   },
 });
 ```
 
-**Important:** The `rewrite` function removes the `/api` prefix because our backend endpoints are at `/v1/auth/...` not `/api/v1/auth/...`.
+**Important:** The `rewrite` function removes the `/api` prefix because our backend endpoints are at `/v1/auth/...` not `/api/v1/auth/...`. The `secure: false` option allows proxying to HTTP targets.
 
 ---
 
@@ -806,10 +815,11 @@ frontend-dashboard/src/
 | **Form Validation** | validateForm() returns error string or null |
 | **Error Handling** | try/catch with setError() |
 | **Loading State** | Disable button + show loading text |
-| **Token Storage** | `localStorage.setItem('payflow_token', ...)` |
+| **Token Storage** | `localStorage.setItem('payflow_token', ...)` and `payflow_refresh_token` |
 | **Navigation** | `useNavigate()` from react-router-dom |
 | **Auth Check** | useEffect to verify token on page load |
 | **Conditional Rendering** | checkingAuth state for loading |
+| **React Types** | Use `React.FormEvent<HTMLFormElement>` instead of deprecated `FormEvent` |
 
 ---
 
