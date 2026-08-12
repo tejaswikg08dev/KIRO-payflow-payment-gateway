@@ -23,7 +23,8 @@ RUN mvn package -pl identity-service -am -DskipTests -B \
     && mv identity-service/target/*.jar /app/app.jar
 
 # Stage 2: Runtime with JRE only
-FROM eclipse-temurin:21-jre-alpine AS runtime
+# IMPORTANT: Must match JDK version in build stage (17)
+FROM eclipse-temurin:17-jre-alpine AS runtime
 WORKDIR /app
 
 # Create non-root user

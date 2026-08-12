@@ -7,40 +7,89 @@
 
 ## 1. What We're Building
 
-In this part, you'll understand the **Docker configuration** for all PayFlow services.
+In this part, you'll understand the **Docker configuration** for PayFlow services.
+
+> **Sprint 1 Focus:** For Sprint 1 (Auth & Onboarding), use `docker-compose-infra.yml` which provides PostgreSQL, Redis, DynamoDB Local, and LocalStack. Run Java services locally via IDE for easier debugging.
+
+### Sprint 1: Infrastructure Only (docker-compose-infra.yml)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     DOCKER ARCHITECTURE                                      │
+│                 SPRINT 1: docker-compose-infra.yml                           │
 │                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    docker-compose.yml                                │   │
-│  │                                                                      │   │
-│  │  Infrastructure Layer (data-net)                                    │   │
-│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐   │   │
-│  │  │ postgres   │  │ redis      │  │ zookeeper  │  │ kafka      │   │   │
-│  │  │ :5432      │  │ :6379      │  │ :2181      │  │ :9092      │   │   │
-│  │  └────────────┘  └────────────┘  └────────────┘  └────────────┘   │   │
-│  │                                                                      │   │
-│  │  Backend Layer (backend-net)                                        │   │
-│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐   │   │
-│  │  │ service-   │  │ config-    │  │ identity-  │  │ payment-   │   │   │
-│  │  │ registry   │  │ server     │  │ service    │  │ service    │   │   │
-│  │  │ :8761      │  │ :8888      │  │ :8081      │  │ :8082      │   │   │
-│  │  └────────────┘  └────────────┘  └────────────┘  └────────────┘   │   │
-│  │                                                                      │   │
-│  │  ┌────────────┐  ┌────────────┐                                    │   │
-│  │  │ api-       │  │ bank-      │                                    │   │
-│  │  │ gateway    │  │ simulator  │                                    │   │
-│  │  │ :8080      │  │ :9090      │                                    │   │
-│  │  └────────────┘  └────────────┘                                    │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  Infrastructure Layer (run with: docker compose -f docker-compose-infra.yml up -d)
+│  ┌────────────────┐  ┌────────────────┐                                    │
+│  │ PostgreSQL     │  │ Redis          │                                    │
+│  │ :5432          │  │ :6379          │                                    │
+│  │ payflow-       │  │ payflow-redis  │                                    │
+│  │ postgres       │  │                │                                    │
+│  └────────────────┘  └────────────────┘                                    │
 │                                                                              │
-│  Development Tip: Use docker-compose-infra.yml for infrastructure only    │
+│  ┌────────────────┐  ┌────────────────┐                                    │
+│  │ DynamoDB Local │  │ LocalStack     │                                    │
+│  │ :8000          │  │ :4566          │                                    │
+│  │ payflow-       │  │ SQS + SNS      │                                    │
+│  │ dynamodb       │  │ payflow-       │                                    │
+│  │                │  │ localstack     │                                    │
+│  └────────────────┘  └────────────────┘                                    │
+│                                                                              │
+│  Application Layer (run locally via IDE or mvn spring-boot:run)            │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐                           │
+│  │ service-   │  │ identity-  │  │ merchant-  │                           │
+│  │ registry   │  │ service    │  │ service    │                           │
+│  │ :8761      │  │ :8081      │  │ :8082      │                           │
+│  └────────────┘  └────────────┘  └────────────┘                           │
+│                                                                              │
+│  ┌────────────┐  ┌────────────┐  ┌────────────────┐                       │
+│  │ config-    │  │ api-       │  │ frontend-      │                       │
+│  │ server     │  │ gateway    │  │ dashboard      │                       │
+│  │ :8888      │  │ :8080      │  │ :3000          │                       │
+│  └────────────┘  └────────────┘  └────────────────┘                       │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Full Stack: docker-compose.yml (Sprint 2+)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                 FULL STACK: docker-compose.yml                               │
+│                                                                              │
+│  Infrastructure Layer (data-net)                                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                      │
+│  │ postgres │ │ redis    │ │zookeeper │ │ kafka    │                      │
+│  │ :5432    │ │ :6379    │ │ :2181    │ │ :9092    │                      │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘                      │
+│                                                                              │
+│  Backend Layer (backend-net)                                                │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                      │
+│  │ service- │ │ config-  │ │ identity-│ │ merchant-│                      │
+│  │ registry │ │ server   │ │ service  │ │ service  │                      │
+│  │ :8761    │ │ :8888    │ │ :8081    │ │ :8082    │                      │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘                      │
+│                                                                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐                                    │
+│  │ payment- │ │ api-     │ │ bank-    │                                    │
+│  │ service  │ │ gateway  │ │ simulator│                                    │
+│  │ :8083    │ │ :8080    │ │ :9000    │                                    │
+│  └──────────┘ └──────────┘ └──────────┘                                    │
+│                                                                              │
+│  Frontend Layer (frontend-net)                                              │
+│  ┌──────────────┐ ┌──────────────┐                                        │
+│  │ merchant-    │ │ hosted-      │                                        │
+│  │ portal :3000 │ │ checkout     │                                        │
+│  │              │ │ :3001        │                                        │
+│  └──────────────┘ └──────────────┘                                        │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### When to Use Each File
+
+| File | Services | Use Case |
+|------|----------|----------|
+| `docker-compose-infra.yml` | PostgreSQL, Redis, DynamoDB Local, LocalStack | **Sprint 1**: Run infra in Docker, services locally via IDE |
+| `docker-compose.yml` | All services containerized + Kafka/Zookeeper | **Sprint 2+**: Full integration testing |
 
 ---
 
@@ -126,24 +175,43 @@ In this part, you'll understand the **Docker configuration** for all PayFlow ser
 
 ## 3. Docker Compose Files
 
-PayFlow uses two compose files:
+PayFlow uses multiple compose files for different environments:
 
 | File | Purpose | When to Use |
 |------|---------|-------------|
-| `docker-compose-infra.yml` | Infrastructure only | Local development |
-| `docker-compose.yml` | Full stack | Integration testing |
+| `docker-compose-infra.yml` | Infrastructure only (PostgreSQL, Redis, DynamoDB, LocalStack) | **Sprint 1 local development** |
+| `docker-compose.yml` | Full stack with all services + Kafka/Zookeeper | Integration testing, Sprint 2+ |
+| `docker-compose.prod.yml` | Production-optimized configuration | Production deployment |
+
+### Infrastructure Services Summary
+
+| Service | Port | Image | Purpose |
+|---------|------|-------|---------|
+| PostgreSQL | 5432 | postgres:15 | Main database (identity, merchant, payment schemas) |
+| Redis | 6379 | redis:7-alpine | Caching, rate limiting, idempotency |
+| DynamoDB Local | 8000 | amazon/dynamodb-local | Webhook events, routing metrics, audit trail |
+| LocalStack | 4566 | localstack/localstack | SQS + SNS simulation (notifications) |
+| Zookeeper | 2181 | confluentinc/cp-zookeeper:7.5.0 | Kafka coordination (docker-compose.yml only) |
+| Kafka | 9092 | confluentinc/cp-kafka:7.5.0 | Event streaming (docker-compose.yml only) |
 
 ---
 
 ## 4. Step-by-Step: Infrastructure Only
 
-### Step 4.1: docker-compose-infra.yml
+### Step 4.1: docker-compose-infra.yml (Actual File)
 
 **File: `docker-compose-infra.yml`**
 
 ```yaml
 # Docker Compose — Infrastructure Only
+# Run this first to start databases and messaging services locally.
 # Usage: docker compose -f docker-compose-infra.yml up -d
+#
+# This starts:
+# - PostgreSQL (port 5432) — our main relational database
+# - Redis (port 6379) — caching, idempotency, rate limiting
+# - DynamoDB Local (port 8000) — webhook events, routing metrics
+# - LocalStack (port 4566) — simulates AWS SQS and SNS locally
 
 version: '3.8'
 
@@ -151,6 +219,8 @@ services:
 
   # ===== PostgreSQL Database =====
   # Stores: users, merchants, payments, settlements
+  # Access: localhost:5432
+  # Credentials: payflow / payflow_secret
   postgres:
     image: postgres:15
     container_name: payflow-postgres
@@ -170,7 +240,8 @@ services:
       retries: 5
 
   # ===== Redis Cache =====
-  # Stores: idempotency keys, rate limit counters, JWT blacklist
+  # Stores: idempotency keys, rate limit counters, JWT blacklist, routing cache
+  # Access: localhost:6379
   redis:
     image: redis:7-alpine
     container_name: payflow-redis
@@ -185,6 +256,8 @@ services:
 
   # ===== DynamoDB Local =====
   # Stores: webhook events, routing metrics, audit trail
+  # Access: localhost:8000
+  # This is Amazon's official local DynamoDB emulator
   dynamodb-local:
     image: amazon/dynamodb-local:latest
     container_name: payflow-dynamodb
@@ -194,6 +267,8 @@ services:
 
   # ===== LocalStack (SQS + SNS) =====
   # Simulates AWS services locally
+  # SQS endpoint: http://localhost:4566
+  # SNS endpoint: http://localhost:4566
   localstack:
     image: localstack/localstack:latest
     container_name: payflow-localstack
@@ -202,6 +277,7 @@ services:
     environment:
       SERVICES: sqs,sns
       DEFAULT_REGION: ap-south-1
+      DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       - ./docker/init-localstack.sh:/etc/localstack/init/ready.d/init.sh
 
@@ -221,13 +297,29 @@ volumes:
 │  • User: payflow                                                            │
 │  • Password: payflow_secret                                                 │
 │  • Port: 5432                                                               │
+│  • Container: payflow-postgres                                              │
 │  • Init script: ./docker/init-db.sql (creates schemas)                     │
 │                                                                              │
 │  Redis:                                                                     │
 │  ──────                                                                     │
 │  • Port: 6379                                                               │
+│  • Container: payflow-redis                                                 │
 │  • Max memory: 128MB                                                        │
 │  • Eviction: allkeys-lru (remove least recently used)                      │
+│                                                                              │
+│  DynamoDB Local:                                                            │
+│  ───────────────                                                            │
+│  • Port: 8000                                                               │
+│  • Container: payflow-dynamodb                                              │
+│  • Mode: In-memory (data lost on restart)                                  │
+│  • Use: Webhook events, routing metrics, audit trail                       │
+│                                                                              │
+│  LocalStack (AWS Simulator):                                               │
+│  ───────────────────────────                                                │
+│  • Port: 4566 (unified endpoint for all AWS services)                      │
+│  • Container: payflow-localstack                                           │
+│  • Services: SQS (queues), SNS (notifications)                             │
+│  • Region: ap-south-1                                                       │
 │                                                                              │
 │  These values MUST match your application.yml files!                       │
 │                                                                              │
@@ -248,6 +340,19 @@ docker compose -f docker-compose-infra.yml ps
 # payflow-redis       running (healthy)
 # payflow-dynamodb    running
 # payflow-localstack  running
+
+# Verify PostgreSQL connection
+docker exec -it payflow-postgres psql -U payflow -d payflow -c "\dt"
+
+# Verify Redis connection
+docker exec -it payflow-redis redis-cli ping
+# Expected: PONG
+
+# Verify DynamoDB Local
+curl http://localhost:8000
+
+# Verify LocalStack
+curl http://localhost:4566/_localstack/health
 ```
 
 ---
@@ -514,19 +619,49 @@ docker compose down -v
 
 ```
 KIRO-payflow-payment-gateway/
-├── docker-compose.yml          ← Full stack
-├── docker-compose-infra.yml    ← Infrastructure only
+├── docker-compose.yml              ← Full stack (all services + Kafka/Zookeeper)
+├── docker-compose-infra.yml        ← Infrastructure only (Sprint 1)
+├── docker-compose.prod.yml         ← Production configuration
 ├── docker/
-│   ├── init-db.sql             ← PostgreSQL init script
-│   └── init-localstack.sh      ← AWS services init
+│   ├── init-db.sql                 ← PostgreSQL init (creates schemas)
+│   └── init-localstack.sh          ← AWS services init (SQS queues, SNS topics)
+│
+│ Services with Dockerfiles:
+├── api-gateway/
+│   └── Dockerfile
+├── bank-simulator/
+│   └── Dockerfile
+├── config-server/
+│   └── Dockerfile
 ├── identity-service/
+│   └── Dockerfile
+├── merchant-service/
+│   └── Dockerfile
+├── notification-service/
 │   └── Dockerfile
 ├── payment-service/
 │   └── Dockerfile
-├── api-gateway/
+├── routing-service/
 │   └── Dockerfile
-└── ...other services
+├── service-registry/
+│   └── Dockerfile
+├── settlement-service/
+│   └── Dockerfile
+├── webhook-service/
+│   └── Dockerfile
+│
+│ Frontend applications (no Dockerfile in Sprint 1, run via npm):
+├── frontend-dashboard/             ← Merchant portal (Sprint 1)
+├── frontend-checkout/              ← Hosted checkout page
+└── frontend-developer-portal/      ← Developer documentation
 ```
+
+### Services by Sprint
+
+| Sprint | Services |
+|--------|----------|
+| Sprint 1 | service-registry, config-server, api-gateway, identity-service, merchant-service, frontend-dashboard |
+| Sprint 2+ | payment-service, bank-simulator, routing-service, webhook-service, notification-service, settlement-service |
 
 ---
 
@@ -546,20 +681,39 @@ KIRO-payflow-payment-gateway/
 │  │  Network isolation     │  data-net internal, frontend-net external  │   │
 │  │  Service dependencies  │  depends_on with condition: service_healthy│   │
 │  │  JVM tuning            │  UseContainerSupport, MaxRAMPercentage     │   │
+│  │  AWS Local Dev         │  DynamoDB Local + LocalStack (SQS/SNS)     │   │
 │  └────────────────────────┴────────────────────────────────────────────┘   │
 │                                                                              │
-│  Development Tip: Use docker-compose-infra.yml for daily development.      │
-│  Run services locally with IDE debugger, connect to Docker databases.      │
+│  Sprint 1 Workflow:                                                         │
+│  ─────────────────                                                          │
+│  1. docker compose -f docker-compose-infra.yml up -d                       │
+│  2. Run Java services locally via IDE (easier debugging)                   │
+│  3. npm run dev for frontend-dashboard                                     │
+│                                                                              │
+│  Infrastructure Services (docker-compose-infra.yml):                       │
+│  ──────────────────────────────────────────────────                         │
+│  • PostgreSQL (:5432) - Main database                                      │
+│  • Redis (:6379) - Caching, rate limiting                                  │
+│  • DynamoDB Local (:8000) - Webhook events, audit trail                    │
+│  • LocalStack (:4566) - SQS queues, SNS topics                             │
+│                                                                              │
+│  Full Stack (docker-compose.yml) adds:                                     │
+│  ─────────────────────────────────────                                      │
+│  • Zookeeper (:2181) - Kafka coordination                                  │
+│  • Kafka (:9092) - Event streaming for payment-service                     │
+│  • All backend services containerized                                      │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 | Concept | What to Remember |
 |---------|------------------|
-| **Two compose files** | infra-only for dev, full for integration |
+| **docker-compose-infra.yml** | PostgreSQL, Redis, DynamoDB Local, LocalStack |
+| **docker-compose.yml** | Full stack + Kafka/Zookeeper (Sprint 2+) |
 | **Multi-stage** | Smaller images, better security |
 | **depends_on** | Use `condition: service_healthy` |
 | **Networks** | Isolate data layer with `internal: true` |
+| **AWS Local** | LocalStack for SQS/SNS, DynamoDB Local for NoSQL |
 
 ---
 

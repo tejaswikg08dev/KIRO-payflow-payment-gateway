@@ -106,8 +106,8 @@ services:
       SERVER_PORT: 8080
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
       IDENTITY_SERVICE_URL: http://identity-service:8081
-      PAYMENT_SERVICE_URL: http://payment-service:8082
       MERCHANT_SERVICE_URL: http://merchant-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8083
       ROUTING_SERVICE_URL: http://routing-service:8084
     depends_on:
       config-server:

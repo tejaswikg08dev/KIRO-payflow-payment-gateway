@@ -185,11 +185,11 @@ services:
       - backend-net
       - data-net
 
-  payment-service:
+  merchant-service:
     build:
       context: .
-      dockerfile: payment-service/Dockerfile
-    container_name: payflow-payment
+      dockerfile: merchant-service/Dockerfile
+    container_name: payflow-merchant
     ports:
       - "8082:8082"
     environment:
@@ -199,10 +199,50 @@ services:
       SPRING_DATASOURCE_PASSWORD: payflow_secret
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SERVER_PORT: 8082
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+    networks:
+      - backend-net
+      - data-net
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_name: payflow-payment
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payflow
+      SPRING_DATASOURCE_USERNAME: payflow
+      SPRING_DATASOURCE_PASSWORD: payflow_secret
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       BANK_SIMULATOR_HOST: bank-simulator
-      BANK_SIMULATOR_PORT: 9090
-      SERVER_PORT: 8082
+      BANK_SIMULATOR_PORT: 9000
+      SERVER_PORT: 8083
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       postgres:
@@ -216,7 +256,7 @@ services:
       config-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -244,7 +284,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       IDENTITY_SERVICE_URL: http://identity-service:8081
-      PAYMENT_SERVICE_URL: http://payment-service:8082
+      MERCHANT_SERVICE_URL: http://merchant-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8083
       SERVER_PORT: 8080
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
@@ -253,6 +294,8 @@ services:
       config-server:
         condition: service_healthy
       identity-service:
+        condition: service_healthy
+      merchant-service:
         condition: service_healthy
       payment-service:
         condition: service_healthy
@@ -277,11 +320,11 @@ services:
       dockerfile: bank-simulator/Dockerfile
     container_name: payflow-bank-sim
     ports:
-      - "9090:9090"
+      - "9000:9000"
     environment:
-      SERVER_PORT: 9090
+      SERVER_PORT: 9000
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9090/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/actuator/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -291,13 +334,13 @@ services:
 
   # ─── Frontend Applications ─────────────────────────────
 
-  merchant-portal:
+  frontend-dashboard:
     build:
-      context: ./merchant-portal
+      context: ./frontend-dashboard
       dockerfile: Dockerfile
       args:
         VITE_API_URL: http://localhost:8080
-    container_name: payflow-portal
+    container_name: payflow-dashboard
     ports:
       - "3000:80"
     depends_on:
@@ -311,9 +354,9 @@ services:
     networks:
       - frontend-net
 
-  hosted-checkout:
+  frontend-checkout:
     build:
-      context: ./hosted-checkout
+      context: ./frontend-checkout
       dockerfile: Dockerfile
       args:
         VITE_API_URL: http://localhost:8080
